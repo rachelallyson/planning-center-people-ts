@@ -1,0 +1,67 @@
+{
+    "name": "@rachelallyson/planning-center-people-ts",
+    "version": "1.0.0",
+    "description": "A strictly typed TypeScript client for Planning Center Online People API",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rm -rf dist",
+        "prebuild": "npm run clean",
+        "test": "jest --testPathIgnorePatterns=integration.test.ts",
+        "test:watch": "jest --watch --testPathIgnorePatterns=integration.test.ts",
+        "test:coverage": "jest --coverage --testPathIgnorePatterns=integration.test.ts",
+        "test:ci": "jest --ci --coverage --watchAll=false --testPathIgnorePatterns=integration.test.ts",
+        "test:integration": "dotenv -e .env.test -- jest --testPathPatterns=integration.test.ts --setupFilesAfterEnv='<rootDir>/tests/integration-setup.ts' --testTimeout=30000",
+        "test:edge-cases": "jest --testPathPatterns=edge-cases.test.ts --testTimeout=30000",
+        "test:all": "npm run test && npm run test:edge-cases",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "planning-center",
+        "planning-center-online",
+        "pco",
+        "api",
+        "typescript",
+        "json-api",
+        "people",
+        "church",
+        "crm",
+        "client",
+        "sdk",
+        "rate-limiting",
+        "error-handling",
+        "performance",
+        "caching"
+    ],
+    "author": "Rachel Higley",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/jest": "^30.0.0",
+        "dotenv": "^16.4.5",
+        "jest": "^30.2.0",
+        "ts-jest": "^29.4.4",
+        "typescript": "^5.9.3"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE",
+        "CHANGELOG.md"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/rachelallyson/planning-center-people-ts.git"
+    },
+    "bugs": {
+        "url": "https://github.com/rachelallyson/planning-center-people-ts/issues"
+    },
+    "homepage": "https://github.com/rachelallyson/planning-center-people-ts#readme",
+    "engines": {
+        "node": ">=16.0.0"
+    },
+    "publishConfig": {
+        "access": "public"
+    }
+}
