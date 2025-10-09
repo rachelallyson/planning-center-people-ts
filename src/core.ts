@@ -12,6 +12,7 @@ import {
   ResourceObject,
   Response as JsonApiResponse,
 } from './types';
+import { attemptTokenRefresh, hasRefreshTokenCapability, type TokenRefreshCallback, type TokenRefreshFailureCallback } from './auth';
 
 // ===== PCO Client Configuration =====
 export interface PcoClientConfig {
@@ -21,6 +22,10 @@ export interface PcoClientConfig {
   accessToken?: string;
   /** OAuth 2.0 Refresh Token (for multi-user apps) */
   refreshToken?: string;
+  /** Callback to handle token refresh */
+  onTokenRefresh?: TokenRefreshCallback;
+  /** Callback to handle token refresh failures */
+  onTokenRefreshFailure?: TokenRefreshFailureCallback;
   /** App ID (for Personal Access Token auth) */
   appId?: string;
   /** App Secret (for Personal Access Token auth) */
@@ -498,6 +503,19 @@ async function makeFetchRequest<TDoc>(
 
     // Handle other errors
     if (!response.ok) {
+      // Handle 401 errors with token refresh if available
+      if (response.status === 401 && hasRefreshTokenCapability(client)) {
+        try {
+          // Attempt to refresh the token and retry the request
+          return await attemptTokenRefresh(client, () =>
+            makeFetchRequest<TDoc>(client, method, endpoint, data, params, context)
+          );
+        } catch (refreshError) {
+          // If token refresh fails, fall through to normal error handling
+          console.warn('Token refresh failed:', refreshError);
+        }
+      }
+
       let errorData: unknown;
 
       try {

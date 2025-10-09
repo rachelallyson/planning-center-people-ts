@@ -14,6 +14,7 @@ A strictly typed TypeScript client for Planning Center Online People API, built 
 - ✅ **Automatic Retries**: Configurable exponential backoff with smart retry logic
 - ✅ **Request Timeouts**: Configurable request timeouts
 - ✅ **Pagination**: Automatic pagination support
+- ✅ **File Upload Handling**: Intelligent file upload detection and processing for custom fields
 - ✅ **No Index Signatures**: Clean type definitions without index signatures
 
 ## Installation
@@ -68,6 +69,17 @@ const updatedPerson = await updatePerson(client, 'person-id', {
 
 // Delete a person
 await deletePerson(client, 'person-id');
+
+// Smart file upload handling for custom fields
+import { createPersonFieldData } from '@planning-center-people-ts';
+
+// Automatically determines field type and handles file uploads appropriately
+await createPersonFieldData(
+    client,
+    'person-id',
+    'field-definition-id',
+    '<a href="https://example.com/document.pdf" download>View File</a>'
+);
 ```
 
 ## Configuration
@@ -502,6 +514,22 @@ See [TYPE_VALIDATION_SUMMARY.md](./TYPE_VALIDATION_SUMMARY.md) for detailed docu
 3. Make your changes
 4. Add tests (both unit and integration)
 5. Submit a pull request
+
+## 📚 Comprehensive Documentation
+
+This library includes extensive documentation covering all aspects of usage:
+
+- **[📖 Complete Documentation](./docs/README.md)** - Comprehensive guide covering all features
+- **[🚀 Getting Started](./docs/OVERVIEW.md)** - What this library does and why you should use it
+- **[⚙️ Installation Guide](./docs/INSTALLATION.md)** - Complete setup instructions for all environments
+- **[🔐 Authentication Guide](./docs/AUTHENTICATION.md)** - All authentication methods and token management
+- **[📋 API Reference](./docs/API_REFERENCE.md)** - Complete reference for all 40+ functions
+- **[💡 Examples & Patterns](./docs/EXAMPLES.md)** - Real-world examples and common patterns
+- **[🛠️ Error Handling](./docs/ERROR_HANDLING.md)** - Advanced error management and recovery
+- **[⚡ Performance Guide](./docs/PERFORMANCE.md)** - Optimization techniques and bulk operations
+- **[🔧 Troubleshooting](./docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[🔄 Migration Guide](./docs/MIGRATION.md)** - Switching from other libraries
+- **[⭐ Best Practices](./docs/BEST_PRACTICES.md)** - Production-ready patterns and security
 
 ## License
 

@@ -49,25 +49,14 @@ export interface PersonAttributes extends Attributes {
 }
 
 export interface PersonRelationships {
-  household?: Relationship;
   emails?: Relationship;
   phone_numbers?: Relationship;
-  addresses?: Relationship;
-  social_profiles?: Relationship;
-  field_data?: Relationship;
-  lists?: Relationship;
-  notes?: Relationship;
-  workflows?: Relationship;
-  organizations?: Relationship;
-  // Additional relationships seen in live responses
   primary_campus?: Relationship;
   gender?: Relationship;
 }
 
 export interface PersonResource
-  extends ResourceObject<'Person', PersonAttributes, PersonRelationships> {
-  type: 'Person';
-}
+  extends ResourceObject<'Person', PersonAttributes, PersonRelationships> { }
 
 export type PeopleList = Paginated<PersonResource, PeopleIncluded>;
 export type PersonSingle = Response<PersonResource>;
@@ -88,9 +77,7 @@ export interface EmailRelationships {
 }
 
 export interface EmailResource
-  extends ResourceObject<'Email', EmailAttributes, EmailRelationships> {
-  type: 'Email';
-}
+  extends ResourceObject<'Email', EmailAttributes, EmailRelationships> { }
 
 export type EmailsList = Paginated<EmailResource>;
 export type EmailSingle = Response<EmailResource>;
@@ -114,9 +101,7 @@ export interface PhoneNumberResource
     'PhoneNumber',
     PhoneNumberAttributes,
     PhoneNumberRelationships
-  > {
-  type: 'PhoneNumber';
-}
+  > { }
 
 export type PhoneNumbersList = Paginated<PhoneNumberResource>;
 export type PhoneNumberSingle = Response<PhoneNumberResource>;
@@ -124,12 +109,13 @@ export type PhoneNumberSingle = Response<PhoneNumberResource>;
 // ===== Address Resource =====
 
 export interface AddressAttributes extends Attributes {
-  address1?: string;
-  address2?: string;
+  street_line_1?: string;
+  street_line_2?: string;
   city?: string;
   state?: string;
   zip?: string;
-  country?: string;
+  country_code?: string;
+  country_name?: string;
   location?: string;
   primary?: boolean;
   created_at?: string;
@@ -142,9 +128,7 @@ export interface AddressRelationships {
 }
 
 export interface AddressResource
-  extends ResourceObject<'Address', AddressAttributes, AddressRelationships> {
-  type: 'Address';
-}
+  extends ResourceObject<'Address', AddressAttributes, AddressRelationships> { }
 
 export type AddressesList = Paginated<AddressResource>;
 export type AddressSingle = Response<AddressResource>;
@@ -159,7 +143,7 @@ export interface HouseholdAttributes extends Attributes {
 
 export interface HouseholdRelationships {
   people?: Relationship;
-  addresses?: Relationship;
+  primary_contact?: Relationship;
 }
 
 export interface HouseholdResource
@@ -167,9 +151,7 @@ export interface HouseholdResource
     'Household',
     HouseholdAttributes,
     HouseholdRelationships
-  > {
-  type: 'Household';
-}
+  > { }
 
 export type HouseholdsList = Paginated<HouseholdResource>;
 export type HouseholdSingle = Response<HouseholdResource>;
@@ -177,8 +159,7 @@ export type HouseholdSingle = Response<HouseholdResource>;
 // ===== Social Profile Resource =====
 
 export interface SocialProfileAttributes extends Attributes {
-  service?: string;
-  username?: string;
+  site?: string;
   url?: string;
   verified?: boolean;
   created_at?: string;
@@ -186,7 +167,7 @@ export interface SocialProfileAttributes extends Attributes {
 }
 
 export interface SocialProfileRelationships {
-  person?: Relationship;
+  // According to API docs, SocialProfile has no relationships
 }
 
 export interface SocialProfileResource
@@ -194,9 +175,7 @@ export interface SocialProfileResource
     'SocialProfile',
     SocialProfileAttributes,
     SocialProfileRelationships
-  > {
-  type: 'SocialProfile';
-}
+  > { }
 
 export type SocialProfilesList = Paginated<SocialProfileResource>;
 export type SocialProfileSingle = Response<SocialProfileResource>;
@@ -204,18 +183,17 @@ export type SocialProfileSingle = Response<SocialProfileResource>;
 // ===== Field Definition Resource =====
 
 export interface FieldDefinitionAttributes extends Attributes {
-  name?: string;
-  data_type?: string;
-  tab_id?: string | number; // Can be string or number depending on API version
-  sequence?: string | number; // Can be string or number depending on API version
-  deleted_at?: string | null | false; // Can be date string, null, or boolean false
-  required?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  config: string | Record<string, any> | null;
+  data_type: string;
+  deleted_at: string | null | false; // Can be date string, null, or boolean false
+  name: string;
+  sequence: number;
+  slug: string;
+  tab_id: number;
 }
 
 export interface FieldDefinitionRelationships {
-  field_options?: Relationship;
+  tab?: Relationship;
 }
 
 export interface FieldDefinitionResource
@@ -223,20 +201,40 @@ export interface FieldDefinitionResource
     'FieldDefinition',
     FieldDefinitionAttributes,
     FieldDefinitionRelationships
-  > {
-  type: 'FieldDefinition';
-}
+  > { }
 
 export type FieldDefinitionsList = Paginated<FieldDefinitionResource>;
 export type FieldDefinitionSingle = Response<FieldDefinitionResource>;
 
-// ===== Field Option Resource =====
+// ===== Tab Resource =====
 
-export interface FieldOptionAttributes extends Attributes {
-  value?: string;
+export interface TabAttributes extends Attributes {
+  name?: string;
   sequence?: string | number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface TabRelationships {
+  // Tabs may have relationships to field definitions
+  field_definitions?: Relationship;
+}
+
+export interface TabResource
+  extends ResourceObject<
+    'Tab',
+    TabAttributes,
+    TabRelationships
+  > { }
+
+export type TabsList = Paginated<TabResource>;
+export type TabSingle = Response<TabResource>;
+
+// ===== Field Option Resource =====
+
+export interface FieldOptionAttributes extends Attributes {
+  value: string;
+  sequence: string | number;
 }
 
 export interface FieldOptionRelationships {
@@ -248,9 +246,7 @@ export interface FieldOptionResource
     'FieldOption',
     FieldOptionAttributes,
     FieldOptionRelationships
-  > {
-  type: 'FieldOption';
-}
+  > { }
 
 export type FieldOptionsList = Paginated<FieldOptionResource>;
 export type FieldOptionSingle = Response<FieldOptionResource>;
@@ -259,13 +255,15 @@ export type FieldOptionSingle = Response<FieldOptionResource>;
 
 export interface FieldDatumAttributes extends Attributes {
   value?: string | null;
-  file?: { url?: string | null } | null;
+  file?: {
+    url?: string | null;
+    // Additional file metadata that may be present
+    [key: string]: any;
+  } | null;
   file_content_type?: string | null;
   file_name?: string | null;
   file_size?: string | number | null;
-  // PCO also returns created_at/updated_at on field data
-  created_at?: string;
-  updated_at?: string;
+
 }
 
 export interface FieldDatumRelationships {
@@ -280,9 +278,7 @@ export interface FieldDatumResource
     'FieldDatum',
     FieldDatumAttributes,
     FieldDatumRelationships
-  > {
-  type: 'FieldDatum';
-}
+  > { }
 
 export type FieldDataList = Paginated<FieldDatumResource>;
 export type FieldDataSingle = Response<FieldDatumResource>;
@@ -296,17 +292,9 @@ export interface ListAttributes extends Attributes {
   updated_at?: string;
 }
 
-export interface ListRelationships {
-  category?: Relationship;
-  people?: Relationship;
-  shares?: Relationship;
-  stars?: Relationship;
-}
 
 export interface ListResource
-  extends ResourceObject<'List', ListAttributes, ListRelationships> {
-  type: 'List';
-}
+  extends ResourceObject<'List', ListAttributes, {}> { }
 
 export type ListsList = Paginated<ListResource>;
 export type ListSingle = Response<ListResource>;
@@ -315,12 +303,13 @@ export type ListSingle = Response<ListResource>;
 
 export interface ListCategoryAttributes extends Attributes {
   name?: string;
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
 }
 
 export interface ListCategoryRelationships {
-  lists?: Relationship;
+  organization?: Relationship;
 }
 
 export interface ListCategoryResource
@@ -328,9 +317,7 @@ export interface ListCategoryResource
     'ListCategory',
     ListCategoryAttributes,
     ListCategoryRelationships
-  > {
-  type: 'ListCategory';
-}
+  > { }
 
 export type ListCategoriesList = Paginated<ListCategoryResource>;
 export type ListCategorySingle = Response<ListCategoryResource>;
@@ -353,9 +340,7 @@ export interface ListShareResource
     'ListShare',
     ListShareAttributes,
     ListShareRelationships
-  > {
-  type: 'ListShare';
-}
+  > { }
 
 export type ListSharesList = Paginated<ListShareResource>;
 export type ListShareSingle = Response<ListShareResource>;
@@ -377,9 +362,7 @@ export interface ListStarResource
     'ListStar',
     ListStarAttributes,
     ListStarRelationships
-  > {
-  type: 'ListStar';
-}
+  > { }
 
 export type ListStarsList = Paginated<ListStarResource>;
 export type ListStarSingle = Response<ListStarResource>;
@@ -394,13 +377,13 @@ export interface NoteAttributes extends Attributes {
 
 export interface NoteRelationships {
   person?: Relationship;
-  category?: Relationship;
+  note_category?: Relationship;
+  organization?: Relationship;
+  created_by?: Relationship;
 }
 
 export interface NoteResource
-  extends ResourceObject<'Note', NoteAttributes, NoteRelationships> {
-  type: 'Note';
-}
+  extends ResourceObject<'Note', NoteAttributes, NoteRelationships> { }
 
 export type NotesList = Paginated<NoteResource>;
 export type NoteSingle = Response<NoteResource>;
@@ -408,13 +391,15 @@ export type NoteSingle = Response<NoteResource>;
 // ===== Note Category Resource =====
 
 export interface NoteCategoryAttributes extends Attributes {
-  name?: string;
-  created_at?: string;
-  updated_at?: string;
+  name: string;
+  locked: boolean;
+  organization_id: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NoteCategoryRelationships {
-  notes?: Relationship;
+  organization?: Relationship;
   shares?: Relationship;
   subscriptions?: Relationship;
 }
@@ -424,9 +409,7 @@ export interface NoteCategoryResource
     'NoteCategory',
     NoteCategoryAttributes,
     NoteCategoryRelationships
-  > {
-  type: 'NoteCategory';
-}
+  > { }
 
 export type NoteCategoriesList = Paginated<NoteCategoryResource>;
 export type NoteCategorySingle = Response<NoteCategoryResource>;
@@ -449,9 +432,7 @@ export interface NoteCategoryShareResource
     'NoteCategoryShare',
     NoteCategoryShareAttributes,
     NoteCategoryShareRelationships
-  > {
-  type: 'NoteCategoryShare';
-}
+  > { }
 
 export type NoteCategorySharesList = Paginated<NoteCategoryShareResource>;
 export type NoteCategoryShareSingle = Response<NoteCategoryShareResource>;
@@ -473,9 +454,7 @@ export interface NoteCategorySubscriptionResource
     'NoteCategorySubscription',
     NoteCategorySubscriptionAttributes,
     NoteCategorySubscriptionRelationships
-  > {
-  type: 'NoteCategorySubscription';
-}
+  > { }
 
 export type NoteCategorySubscriptionsList =
   Paginated<NoteCategorySubscriptionResource>;
@@ -492,8 +471,8 @@ export interface WorkflowAttributes extends Attributes {
 }
 
 export interface WorkflowRelationships {
-  cards?: Relationship;
-  people?: Relationship;
+  workflow_category?: Relationship;
+  campus?: Relationship;
 }
 
 export interface WorkflowResource
@@ -501,9 +480,7 @@ export interface WorkflowResource
     'Workflow',
     WorkflowAttributes,
     WorkflowRelationships
-  > {
-  type: 'Workflow';
-}
+  > { }
 
 export type WorkflowsList = Paginated<WorkflowResource>;
 export type WorkflowSingle = Response<WorkflowResource>;
@@ -536,9 +513,7 @@ export interface WorkflowCardResource
     'WorkflowCard',
     WorkflowCardAttributes,
     WorkflowCardRelationships
-  > {
-  type: 'WorkflowCard';
-}
+  > { }
 
 export type WorkflowCardsList = Paginated<WorkflowCardResource>;
 export type WorkflowCardSingle = Response<WorkflowCardResource>;
@@ -547,23 +522,15 @@ export type WorkflowCardSingle = Response<WorkflowCardResource>;
 
 export interface WorkflowCardNoteAttributes extends Attributes {
   note?: string;
-  created_at?: string;
-  updated_at?: string;
 }
 
-export interface WorkflowCardNoteRelationships {
-  workflow_card?: Relationship;
-  person?: Relationship;
-}
+
 
 export interface WorkflowCardNoteResource
   extends ResourceObject<
     'WorkflowCardNote',
     WorkflowCardNoteAttributes,
-    WorkflowCardNoteRelationships
-  > {
-  type: 'WorkflowCardNote';
-}
+    {}> { }
 
 export type WorkflowCardNotesList = Paginated<WorkflowCardNoteResource>;
 export type WorkflowCardNoteSingle = Response<WorkflowCardNoteResource>;
@@ -571,10 +538,14 @@ export type WorkflowCardNoteSingle = Response<WorkflowCardNoteResource>;
 // ===== Organization Resource =====
 
 export interface OrganizationAttributes extends Attributes {
-  name?: string;
-  description?: string;
+  avatar_url?: string | null;
+  church_center_subdomain?: string;
+  contact_website?: string | null;
+  country_code?: string;
   created_at?: string;
-  updated_at?: string;
+  date_format?: string;
+  name?: string;
+  time_zone?: string;
 }
 
 export interface OrganizationRelationships {
@@ -587,9 +558,7 @@ export interface OrganizationResource
     'Organization',
     OrganizationAttributes,
     OrganizationRelationships
-  > {
-  type: 'Organization';
-}
+  > { }
 
 export type OrganizationsList = Paginated<OrganizationResource>;
 export type OrganizationSingle = Response<OrganizationResource>;
@@ -612,9 +581,7 @@ export interface OrganizationStatisticResource
     'OrganizationStatistic',
     OrganizationStatisticAttributes,
     OrganizationStatisticRelationships
-  > {
-  type: 'OrganizationStatistic';
-}
+  > { }
 
 export type OrganizationStatisticsList =
   Paginated<OrganizationStatisticResource>;
@@ -629,4 +596,5 @@ export type PeopleIncluded =
   | PhoneNumberResource
   | HouseholdResource
   | SocialProfileResource
-  | FieldDatumResource;
+  | FieldDatumResource
+  | TabResource;

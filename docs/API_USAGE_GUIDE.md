@@ -58,6 +58,30 @@ const client = createPcoClient({
 });
 ```
 
+### OAuth 2.0 with Refresh Token Support
+
+```typescript
+const client = createPcoClient({
+  accessToken: userAccessToken,
+  refreshToken: userRefreshToken,
+  appId: 'your-app-id',
+  appSecret: 'your-app-secret',
+  onTokenRefresh: async (newTokens) => {
+    // Save new tokens to your database
+    await saveTokensToDatabase(userId, newTokens);
+  },
+  onTokenRefreshFailure: async (error, context) => {
+    // Handle refresh token failures
+    console.log('Token refresh failed:', error.message);
+    if (error.message.includes('invalid_grant')) {
+      // User needs to re-authenticate
+      await clearUserTokens(userId);
+      redirectToLogin();
+    }
+  },
+});
+```
+
 ### Environment Variables
 
 Create a `.env` file:
@@ -65,6 +89,111 @@ Create a `.env` file:
 ```env
 PCO_APP_ID=your_app_id_here
 PCO_APP_SECRET=your_app_secret_here
+```
+
+## Refresh Token Handling
+
+The library provides automatic refresh token handling for OAuth 2.0 applications. When an access token expires (401 error), the library will automatically attempt to refresh it using the provided refresh token.
+
+### Automatic Token Refresh
+
+```typescript
+import { createPcoClient, getPeople } from '@rachelallyson/planning-center-people-ts';
+
+const client = createPcoClient({
+  accessToken: 'initial-access-token',
+  refreshToken: 'refresh-token',
+  appId: 'your-app-id',
+  appSecret: 'your-app-secret',
+  onTokenRefresh: async (newTokens) => {
+    // This callback is called whenever tokens are refreshed
+    console.log('New access token:', newTokens.access_token);
+    console.log('Expires in:', newTokens.expires_in, 'seconds');
+    
+    // Save to your database
+    await saveTokensToDatabase(userId, newTokens);
+  },
+});
+
+// If the access token is expired, it will be automatically refreshed
+const people = await getPeople(client);
+```
+
+### Manual Token Refresh
+
+```typescript
+import { refreshAccessToken, updateClientTokens } from '@rachelallyson/planning-center-people-ts';
+
+// Manually refresh tokens
+const newTokens = await refreshAccessToken(client, 'refresh-token');
+
+// Update client with new tokens
+updateClientTokens(client, newTokens);
+```
+
+### Error Handling
+
+```typescript
+// Option 1: Handle errors in try/catch
+try {
+  const people = await getPeople(client);
+} catch (error) {
+  if (error.message.includes('Token refresh failed')) {
+    // Refresh token is invalid - user needs to re-authenticate
+    redirectToLogin();
+  } else {
+    // Other API error
+    console.error('API error:', error);
+  }
+}
+
+// Option 2: Use failure callback (recommended)
+const client = createPcoClient({
+  accessToken: userAccessToken,
+  refreshToken: userRefreshToken,
+  appId: 'your-app-id',
+  appSecret: 'your-app-secret',
+  onTokenRefreshFailure: async (error, context) => {
+    // This is called automatically when refresh fails
+    if (error.message.includes('invalid_grant')) {
+      await clearUserTokens(userId);
+      redirectToLogin();
+    } else if (error.message.includes('Network error')) {
+      showNetworkErrorToast();
+    }
+  },
+});
+```
+
+### Token Storage Best Practices
+
+```typescript
+class TokenManager {
+  async saveTokens(userId: string, tokens: TokenResponse): Promise<void> {
+    const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+    
+    await database.tokens.upsert({
+      userId,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt,
+    });
+  }
+
+  async getTokens(userId: string): Promise<TokenResponse | null> {
+    const stored = await database.tokens.findByUserId(userId);
+    if (!stored || stored.expiresAt < new Date()) {
+      return null;
+    }
+    
+    return {
+      access_token: stored.accessToken,
+      refresh_token: stored.refreshToken,
+      token_type: 'Bearer',
+      expires_in: Math.floor((stored.expiresAt.getTime() - Date.now()) / 1000),
+    };
+  }
+}
 ```
 
 ## Basic Operations
@@ -240,6 +369,87 @@ const personNotes = await getNotes(client, {
   where: { person_id: 'person-id' },
 });
 ```
+
+### File Upload Handling
+
+The library provides intelligent file upload handling for custom fields that can automatically detect file URLs and handle them appropriately based on the field type.
+
+#### Basic File Upload Detection
+
+```typescript
+import { 
+  isFileUpload, 
+  extractFileUrl, 
+  processFileValue 
+} from '@rachelallyson/planning-center-people-ts';
+
+// Check if a value contains a file URL
+const htmlFileValue = '<a href="https://onark.s3.us-east-1.amazonaws.com/document.pdf" download>View File</a>';
+const cleanFileUrl = 'https://onark.s3.us-east-1.amazonaws.com/image.jpg';
+const textValue = 'This is just regular text';
+
+console.log(isFileUpload(htmlFileValue)); // true
+console.log(isFileUpload(cleanFileUrl)); // true
+console.log(isFileUpload(textValue)); // false
+
+// Extract clean URLs from HTML markup
+const cleanUrl = extractFileUrl(htmlFileValue);
+console.log(cleanUrl); // https://onark.s3.us-east-1.amazonaws.com/document.pdf
+```
+
+#### Smart Field Data Creation
+
+The `createPersonFieldData` function automatically determines whether a field is a file field or text field and handles the upload appropriately:
+
+```typescript
+import { createPersonFieldData } from '@rachelallyson/planning-center-people-ts';
+
+// This will automatically:
+// 1. Check the field definition to determine if it's a file field
+// 2. For file fields: Use file upload method (handles both clean URLs and HTML markup)
+// 3. For text fields: Clean file URLs from HTML markup and store as text
+const result = await createPersonFieldData(
+  client,
+  'person-id',
+  'field-definition-id',
+  '<a href="https://example.com/document.pdf" download>View File</a>'
+);
+```
+
+**Note**: This function will throw an error if the field definition cannot be found, ensuring data integrity.
+
+#### Manual File Processing
+
+For more control, you can manually process file values:
+
+```typescript
+import { processFileValue } from '@rachelallyson/planning-center-people-ts';
+
+const fileUrl = 'https://example.com/document.pdf';
+
+// For text fields - returns clean URL string
+const textResult = processFileValue(fileUrl, 'text');
+console.log(textResult); // "https://example.com/document.pdf"
+
+// For file fields - returns metadata object
+const fileResult = processFileValue(fileUrl, 'file');
+console.log(fileResult); 
+// {
+//   url: "https://example.com/document.pdf",
+//   filename: "document.pdf",
+//   contentType: "application/pdf"
+// }
+```
+
+#### File Upload Requirements
+
+For file uploads to work properly, you need to install the required dependencies:
+
+```bash
+npm install axios form-data
+```
+
+The library will automatically use these packages when handling file uploads. If they're not installed, you'll get a helpful error message.
 
 ## Error Handling
 

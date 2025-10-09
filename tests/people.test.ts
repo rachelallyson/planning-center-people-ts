@@ -23,7 +23,7 @@ import {
   createWorkflowCard,
   getWorkflowCardNotes,
   createWorkflowCardNote
-} from '../src/people';
+} from '../src';
 import { createPcoClient } from '../src/core';
 
 // Mock the core functions
@@ -205,11 +205,13 @@ describe('People API Functions', () => {
         client,
         '/people/1',
         undefined,
-        {
+        expect.objectContaining({
           endpoint: '/people/1',
           method: 'DELETE',
-          personId: '1'
-        }
+          personId: '1',
+          metadata: { operation: 'delete_person' },
+          timestamp: expect.any(String)
+        })
       );
     });
   });
@@ -392,24 +394,44 @@ describe('People API Functions', () => {
   });
 
   describe('createPersonFieldData', () => {
-    it('should call post with correct parameters', async () => {
+    it('should call post with correct parameters for text field', async () => {
+      const mockFieldDefinition = {
+        data: {
+          id: 'field-def-1',
+          type: 'FieldDefinition',
+          attributes: { data_type: 'text' }
+        }
+      };
       const mockResponse = {
         data: { id: '1', type: 'FieldDatum', attributes: { value: 'Test Value' } }
       };
+
+      mockGetSingle.mockResolvedValueOnce(mockFieldDefinition as any);
       mockPost.mockResolvedValueOnce(mockResponse as any);
 
       const result = await createPersonFieldData(client, '1', 'field-def-1', 'Test Value');
 
+      expect(mockGetSingle).toHaveBeenCalledWith(
+        client,
+        '/field_definitions/field-def-1',
+        { include: '' },
+        expect.objectContaining({
+          endpoint: '/field_definitions/field-def-1',
+          method: 'GET',
+          metadata: {
+            operation: 'get_field_definition_direct',
+          },
+        })
+      );
       expect(mockPost).toHaveBeenCalledWith(
         client,
         '/people/1/field_data',
         { field_definition_id: 'field-def-1', value: 'Test Value' },
         undefined,
-        {
+        expect.objectContaining({
           endpoint: '/people/1/field_data',
           method: 'POST',
-          personId: '1'
-        }
+        })
       );
       expect(result).toBe(mockResponse);
     });

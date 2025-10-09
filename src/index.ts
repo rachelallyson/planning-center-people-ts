@@ -14,6 +14,15 @@ export {
   post,
 } from './core';
 
+// Export authentication utilities
+export type { TokenResponse, TokenRefreshCallback, TokenRefreshFailureCallback } from './auth';
+export {
+  attemptTokenRefresh,
+  hasRefreshTokenCapability,
+  refreshAccessToken,
+  updateClientTokens,
+} from './auth';
+
 // Export API error
 export { PcoApiError } from './api-error';
 
@@ -37,22 +46,25 @@ export {
 
 // Export People-specific functions
 export {
+  createFieldDefinition,
   createFieldOption,
   createPerson,
   createPersonAddress,
   createPersonEmail,
   createPersonFieldData,
-  createPersonFileFieldData,
   createPersonPhoneNumber,
   createPersonSocialProfile,
   createWorkflowCard,
   createWorkflowCardNote,
+  deleteFieldDefinition,
   deletePerson,
   deletePersonFieldData,
+  deleteSocialProfile,
   getFieldDefinitions,
   getFieldOptions,
   getHousehold,
   getHouseholds,
+  getTabs,
   getListById,
   getListCategories,
   getLists,
@@ -145,7 +157,6 @@ export type {
   WorkflowAttributes,
   WorkflowCardAttributes,
   WorkflowCardNoteAttributes,
-  WorkflowCardNoteRelationships,
   WorkflowCardNoteResource,
   WorkflowCardNoteSingle,
   WorkflowCardNotesList,
@@ -173,20 +184,27 @@ export {
 
 // ===== Helper Functions =====
 export {
+  buildQueryParams,
   calculateAge,
   createPersonWithContact,
   createWorkflowCardWithNote,
   exportAllPeopleData,
+  extractFileUrl,
   formatDate,
   formatPersonName,
   getCompletePersonProfile,
+  getFileExtension,
+  getFilename,
   getListsWithCategories,
   getOrganizationInfo,
   getPeopleByHousehold,
   getPersonWorkflowCardsWithNotes,
   getPrimaryContact,
+  isFileUpload,
+  isFileUrl,
   isValidEmail,
   isValidPhone,
+  processFileValue,
   searchPeople,
   validatePersonData,
 } from './helpers';
