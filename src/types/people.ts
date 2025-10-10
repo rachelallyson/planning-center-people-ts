@@ -494,18 +494,46 @@ export interface WorkflowCardAttributes extends Attributes {
   status?: string;
   created_at?: string;
   updated_at?: string;
-  // Fields observed/used by integration and docs
-  completed_at?: string | null;
-  removed_at?: string | null;
-  // Fields discovered in validation
-  snooze_until?: string | null;
+
+  // Computed/Read-only fields (cannot be assigned directly)
+  stage?: string; // Computed field - cannot be assigned
+  completed_at?: string | null; // Computed field - cannot be assigned
+  overdue?: boolean; // Computed field
+  calculated_due_at_in_days_ago?: number; // Computed field
+  flagged_for_notification_at?: string | null; // Computed field
+  moved_to_step_at?: string | null; // Computed field
+
+  // Fields that can be set via actions (not direct assignment)
+  snooze_until?: string | null; // Set via snooze action
+  removed_at?: string | null; // Set via remove action
+
+  // Legacy fields (may be deprecated)
   overdue_at?: string | null;
   stage_id?: string;
+}
+
+// Assignable fields for workflow card updates (only these can be set via PATCH)
+export interface WorkflowCardAssignableAttributes {
+  sticky_assignment?: boolean;
+  assignee_id?: string;
+  person_id?: string;
+}
+
+// Parameters for workflow card actions
+export interface WorkflowCardSnoozeAttributes {
+  duration: number; // Duration in days
+}
+
+export interface WorkflowCardEmailAttributes {
+  subject: string;
+  note: string;
 }
 
 export interface WorkflowCardRelationships {
   workflow?: Relationship;
   person?: Relationship;
+  assignee?: Relationship;
+  current_step?: Relationship;
 }
 
 export interface WorkflowCardResource

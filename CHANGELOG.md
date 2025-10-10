@@ -5,6 +5,122 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-01-17
+
+### 🚀 **MAJOR RELEASE - Complete API Redesign**
+
+This is a **breaking change** release that completely redesigns the API for better developer experience, type safety, and maintainability.
+
+### Added
+
+#### **🏗️ New Class-Based Architecture**
+
+- **PcoClient Class**: Main client with modular architecture
+- **PcoClientManager**: Automatic client caching and lifecycle management
+- **Event System**: Comprehensive event emission for monitoring and debugging
+- **Module Architecture**: Organized API interactions into focused modules
+
+#### **🔧 Core Utilities**
+
+- **Built-in Pagination**: `getAllPages()` method for automatic pagination
+- **Batch Operations**: Execute multiple operations with dependency resolution
+- **Person Matching**: Smart person matching with fuzzy logic and `findOrCreate`
+- **Type-Safe Field Operations**: Enhanced custom field operations with caching
+- **Workflow State Management**: Smart workflow operations with duplicate detection
+
+#### **📦 New Modules**
+
+- **PeopleModule**: Core person operations with smart matching
+- **FieldsModule**: Type-safe custom field operations with caching
+- **WorkflowsModule**: Complete workflow and workflow card management
+- **ContactsModule**: Email, phone, address, and social profile management
+- **HouseholdsModule**: Household operations and member management
+- **NotesModule**: Note and note category operations
+- **ListsModule**: List and list category operations with rule-based membership
+
+#### **🔐 Enhanced Authentication**
+
+- **OAuth 2.0 Support**: Full OAuth with automatic token refresh
+- **Personal Access Token**: HTTP Basic Auth support
+- **Token Refresh**: Automatic refresh with callback support
+- **Environment Persistence**: Automatic token persistence in test environments
+
+#### **⚡ Performance & Reliability**
+
+- **Rate Limiting**: Built-in rate limiting (100 req/min)
+- **Error Handling**: Comprehensive error handling with retry logic
+- **Request Timeouts**: Configurable request timeouts
+- **Event Monitoring**: Real-time request/response monitoring
+
+#### **🧪 Testing Infrastructure**
+
+- **MockPcoClient**: Complete mock implementation for testing
+- **MockResponseBuilder**: Response building utilities
+- **RequestRecorder**: Request recording for testing
+- **Integration Tests**: 129 comprehensive integration tests
+
+### Changed
+
+#### **🔄 Breaking Changes**
+
+- **API Design**: Complete redesign from functional to class-based approach
+- **Import Structure**: New import structure with `PcoClient` class
+- **Method Names**: Updated method names for consistency
+- **Type Definitions**: Enhanced type definitions with better type safety
+
+#### **📈 Improvements**
+
+- **Type Safety**: Enhanced TypeScript support with strict typing
+- **Error Messages**: More descriptive error messages and handling
+- **Documentation**: Comprehensive inline documentation
+- **Performance**: Optimized request handling and caching
+
+### Migration Guide
+
+#### **Before (v1.x)**
+
+```typescript
+import { createPcoClient, getPeople, createPerson } from '@rachelallyson/planning-center-people-ts';
+
+const client = createPcoClient({
+    personalAccessToken: 'your-token',
+    appId: 'your-app-id',
+    appSecret: 'your-app-secret'
+});
+
+const people = await getPeople(client, { per_page: 10 });
+const person = await createPerson(client, { first_name: 'John', last_name: 'Doe' });
+```
+
+#### **After (v2.0.0)**
+
+```typescript
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
+
+const client = new PcoClient({
+    auth: {
+        type: 'personal_access_token',
+        personalAccessToken: 'your-token'
+    }
+});
+
+const people = await client.people.getAll({ perPage: 10 });
+const person = await client.people.create({ first_name: 'John', last_name: 'Doe' });
+```
+
+### Removed
+
+- **Functional API**: All functional API methods removed in favor of class-based approach
+- **Legacy Types**: Old type definitions replaced with enhanced versions
+- **Deprecated Methods**: All deprecated methods removed
+
+### Fixed
+
+- **Type Safety**: Resolved all TypeScript strict mode issues
+- **Error Handling**: Improved error handling and retry logic
+- **Rate Limiting**: Fixed rate limiting edge cases
+- **Authentication**: Resolved token refresh and persistence issues
+
 ## [1.1.0] - 2025-10-08
 
 ### Added

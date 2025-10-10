@@ -28,6 +28,9 @@
         "node_modules",
         "dist",
         "**/*.test.ts",
-        "**/*.spec.ts"
+        "**/*.spec.ts",
+        "src/testing/builders.ts",
+        "src/testing/factories.ts",
+        "src/testing/mock-client.ts"
     ]
 }

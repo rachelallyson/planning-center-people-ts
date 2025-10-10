@@ -1,8 +1,85 @@
-// Export all types
+// ===== v2.0.0 Main Exports =====
+
+// Main client class
+export { PcoClient } from './client';
+
+// Client manager for caching and lifecycle management
+export { PcoClientManager } from './client-manager';
+
+// Configuration types
+export type { PcoClientConfig } from './types/client';
+
+// Event system
+export type { PcoEvent, EventHandler, EventType } from './types/events';
+
+// Batch operations
+export type { BatchOperation, BatchResult, BatchOptions, BatchSummary } from './types/batch';
+
+// Core types
+export type {
+  Paginated,
+  Relationship,
+  ResourceIdentifier,
+  ResourceObject,
+} from './types';
+
+// People types
+export type {
+  PersonResource,
+  PersonAttributes,
+  PersonSingle,
+  PeopleList,
+  EmailResource,
+  EmailAttributes,
+  PhoneNumberResource,
+  PhoneNumberAttributes,
+  AddressResource,
+  AddressAttributes,
+  SocialProfileResource,
+  SocialProfileAttributes,
+} from './types';
+
+// Field types
+export type {
+  FieldDefinitionResource,
+  FieldDefinitionAttributes,
+  FieldDatumResource,
+  FieldDatumAttributes,
+  FieldOptionResource,
+  FieldOptionAttributes,
+  TabResource,
+  TabAttributes,
+} from './types';
+
+// Workflow types
+export type {
+  WorkflowResource,
+  WorkflowAttributes,
+  WorkflowCardResource,
+  WorkflowCardAttributes,
+  WorkflowCardNoteResource,
+  WorkflowCardNoteAttributes,
+} from './types';
+
+// Other resource types
+export type {
+  HouseholdResource,
+  HouseholdAttributes,
+  NoteResource,
+  NoteAttributes,
+  ListResource,
+  ListAttributes,
+  OrganizationResource,
+  OrganizationAttributes,
+} from './types';
+
+// ===== v1.x Compatibility Exports (Deprecated) =====
+
+// Export all types for backward compatibility
 export * from './types';
 
-// Export core client functionality
-export type { PcoClientConfig, PcoClientState } from './core';
+// Export core client functionality (deprecated)
+export type { PcoClientConfig as PcoClientConfigV1, PcoClientState } from './core';
 export {
   createPcoClient,
   del,
@@ -14,7 +91,7 @@ export {
   post,
 } from './core';
 
-// Export authentication utilities
+// Export authentication utilities (deprecated)
 export type { TokenResponse, TokenRefreshCallback, TokenRefreshFailureCallback } from './auth';
 export {
   attemptTokenRefresh,
@@ -44,7 +121,7 @@ export {
   withErrorBoundary,
 } from './error-handling';
 
-// Export People-specific functions
+// Export People-specific functions (deprecated)
 export {
   createFieldDefinition,
   createFieldOption,
@@ -86,88 +163,6 @@ export {
   updatePerson,
   updatePersonAddress,
 } from './people';
-
-// Re-export commonly used types for convenience
-export type {
-  Paginated,
-  Relationship,
-  ResourceIdentifier,
-  ResourceObject,
-} from './types';
-export type {
-  AddressAttributes,
-  AddressesList,
-  AddressResource,
-  AddressSingle,
-  EmailAttributes,
-  EmailResource,
-  EmailSingle,
-  EmailsList,
-  FieldDataList,
-  FieldDataSingle,
-  FieldDatumAttributes,
-  FieldDatumRelationships,
-  FieldDatumResource,
-  FieldDefinitionAttributes,
-  FieldDefinitionResource,
-  FieldDefinitionSingle,
-  FieldDefinitionsList,
-  FieldOptionAttributes,
-  FieldOptionResource,
-  FieldOptionSingle,
-  FieldOptionsList,
-  HouseholdAttributes,
-  HouseholdResource,
-  HouseholdSingle,
-  HouseholdsList,
-  // New types for additional resources
-  ListAttributes,
-  ListCategoriesList,
-  ListCategoryAttributes,
-  ListCategoryResource,
-  ListCategorySingle,
-  ListResource,
-  ListSingle,
-  ListsList,
-  NoteAttributes,
-  NoteCategoriesList,
-  NoteCategoryAttributes,
-  NoteCategoryResource,
-  NoteCategorySingle,
-  NoteResource,
-  NoteSingle,
-  NotesList,
-  OrganizationAttributes,
-  OrganizationResource,
-  OrganizationSingle,
-  // Document types
-  PeopleList,
-  PersonAttributes,
-  PersonRelationships,
-  PersonResource,
-  PersonSingle,
-  PhoneNumberAttributes,
-  PhoneNumberResource,
-  PhoneNumberSingle,
-  PhoneNumbersList,
-  SocialProfileAttributes,
-  SocialProfileResource,
-  SocialProfileSingle,
-  SocialProfilesList,
-  WorkflowAttributes,
-  WorkflowCardAttributes,
-  WorkflowCardNoteAttributes,
-  WorkflowCardNoteResource,
-  WorkflowCardNoteSingle,
-  WorkflowCardNotesList,
-  WorkflowCardRelationships,
-  WorkflowCardResource,
-  WorkflowCardSingle,
-  WorkflowCardsList,
-  WorkflowResource,
-  WorkflowSingle,
-  WorkflowsList,
-} from './types';
 
 // ===== Enhanced Error Handling =====
 export {
@@ -222,3 +217,16 @@ export {
   processLargeDataset,
   streamPeopleData,
 } from './performance';
+
+// ===== Testing Utilities =====
+export {
+  MockPcoClient,
+  MockResponseBuilder,
+  RequestRecorder,
+  createMockClient,
+  createRecordingClient,
+  createTestClient,
+  createErrorMockClient,
+  createSlowMockClient,
+} from './testing';
+export type { MockClientConfig, RecordingConfig } from './testing';
