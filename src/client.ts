@@ -14,6 +14,7 @@ import { ContactsModule } from './modules/contacts';
 import { HouseholdsModule } from './modules/households';
 import { NotesModule } from './modules/notes';
 import { ListsModule } from './modules/lists';
+import { CampusModule } from './modules/campus';
 import { BatchExecutor } from './batch';
 
 export class PcoClient implements EventEmitter {
@@ -24,6 +25,7 @@ export class PcoClient implements EventEmitter {
     public households: HouseholdsModule;
     public notes: NotesModule;
     public lists: ListsModule;
+    public campus: CampusModule;
     public batch: BatchExecutor;
 
     private httpClient: PcoHttpClient;
@@ -45,6 +47,7 @@ export class PcoClient implements EventEmitter {
         this.households = new HouseholdsModule(this.httpClient, this.paginationHelper, this.eventEmitter);
         this.notes = new NotesModule(this.httpClient, this.paginationHelper, this.eventEmitter);
         this.lists = new ListsModule(this.httpClient, this.paginationHelper, this.eventEmitter);
+        this.campus = new CampusModule(this.httpClient, this.paginationHelper, this.eventEmitter);
         this.batch = new BatchExecutor(this, this.eventEmitter);
 
         // Set up event handlers from config

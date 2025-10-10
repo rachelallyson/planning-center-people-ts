@@ -94,6 +94,8 @@ export const pcoClient = new PcoClient({
 
 ## 2. OAuth 2.0 Authentication
 
+**⚠️ Important**: OAuth 2.0 authentication **requires** refresh token handling to prevent token loss. The `onRefresh` and `onRefreshFailure` callbacks are mandatory for OAuth configurations.
+
 ### When to Use
 
 - **Multi-user applications** (web apps, mobile apps)

@@ -191,19 +191,14 @@ export class PcoHttpClient {
             // Handle other errors
             if (!response.ok) {
                 // Handle 401 errors with token refresh if available
-                // Convert v2.0 config to v1.x format for auth functions
-                const v1Config = {
-                    refreshToken: this.config.auth.refreshToken,
-                    onTokenRefresh: this.config.auth.onRefresh,
-                    onTokenRefreshFailure: this.config.auth.onRefreshFailure,
-                };
-                const clientState = { config: v1Config, rateLimiter: this.rateLimiter };
-                if (response.status === 401 && hasRefreshTokenCapability(clientState as any)) {
+                if (response.status === 401 && this.config.auth.type === 'oauth') {
                     try {
-                        await attemptTokenRefresh(clientState as any, () => this.makeRequest<T>(options, requestId));
+                        await this.attemptTokenRefresh();
                         return this.makeRequest<T>(options, requestId);
                     } catch (refreshError) {
                         console.warn('Token refresh failed:', refreshError);
+                        // Call the onRefreshFailure callback
+                        await this.config.auth.onRefreshFailure(refreshError as Error);
                     }
                 }
 
@@ -243,11 +238,11 @@ export class PcoHttpClient {
     }
 
     private addAuthentication(headers: Record<string, string>): void {
-        if (this.config.auth.personalAccessToken) {
+        if (this.config.auth.type === 'personal_access_token') {
             // Personal Access Tokens use HTTP Basic Auth format: app_id:secret
             // The personalAccessToken should be in the format "app_id:secret"
             headers.Authorization = `Basic ${Buffer.from(this.config.auth.personalAccessToken).toString('base64')}`;
-        } else if (this.config.auth.accessToken) {
+        } else if (this.config.auth.type === 'oauth') {
             headers.Authorization = `Bearer ${this.config.auth.accessToken}`;
         }
     }
@@ -281,6 +276,42 @@ export class PcoHttpClient {
             headers[key] = value;
         });
         return headers;
+    }
+
+    private async attemptTokenRefresh(): Promise<void> {
+        if (this.config.auth.type !== 'oauth') {
+            throw new Error('Token refresh is only available for OAuth authentication');
+        }
+
+        const baseURL = this.config.baseURL || 'https://api.planningcenteronline.com/people/v2';
+        const tokenUrl = baseURL.replace('/people/v2', '/oauth/token');
+
+        const response = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: this.config.auth.refreshToken,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`);
+        }
+
+        const tokens = await response.json();
+
+        // Update the config with new tokens
+        this.config.auth.accessToken = tokens.access_token;
+        this.config.auth.refreshToken = tokens.refresh_token;
+
+        // Call the onRefresh callback
+        await this.config.auth.onRefresh({
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token,
+        });
     }
 
     private updateRateLimitTracking(endpoint: string, headers: Record<string, string>): void {

@@ -35,15 +35,21 @@ const client = new PcoClient({
   }
 });
 
-// Or with OAuth
+// Or with OAuth (refresh token handling required)
 const client = new PcoClient({
   auth: {
     type: 'oauth',
     accessToken: 'your-oauth-token',
     refreshToken: 'your-refresh-token',
+    // REQUIRED: Handle token refresh to prevent token loss
     onRefresh: async (tokens) => {
       // Save new tokens to your database
       await saveTokensToDatabase(userId, tokens);
+    },
+    // REQUIRED: Handle refresh failures
+    onRefreshFailure: async (error) => {
+      console.error('Token refresh failed:', error.message);
+      await clearUserTokens(userId);
     }
   }
 });

@@ -2,16 +2,27 @@
  * v2.0.0 Client Configuration Types
  */
 
+/** Authentication configuration for Personal Access Token */
+export interface PersonalAccessTokenAuth {
+    type: 'personal_access_token';
+    personalAccessToken: string;
+}
+
+/** Authentication configuration for OAuth 2.0 with required refresh handling */
+export interface OAuthAuth {
+    type: 'oauth';
+    accessToken: string;
+    refreshToken: string;
+    onRefresh: (tokens: { accessToken: string; refreshToken: string }) => void | Promise<void>;
+    onRefreshFailure: (error: Error) => void | Promise<void>;
+}
+
+/** Union type for authentication configurations */
+export type PcoAuthConfig = PersonalAccessTokenAuth | OAuthAuth;
+
 export interface PcoClientConfig {
     /** Authentication configuration */
-    auth: {
-        type: 'oauth' | 'personal_access_token';
-        accessToken?: string;
-        refreshToken?: string;
-        personalAccessToken?: string;
-        onRefresh?: (tokens: { accessToken: string; refreshToken?: string }) => void | Promise<void>;
-        onRefreshFailure?: (error: Error) => void | Promise<void>;
-    };
+    auth: PcoAuthConfig;
 
     /** Caching configuration */
     caching?: {

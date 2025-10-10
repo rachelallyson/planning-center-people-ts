@@ -1,4 +1,4 @@
-# Planning Center People TypeScript Library - v2.0.0
+# Planning Center People TypeScript Library - v2.2.0
 
 A modern, type-safe TypeScript library for interacting with the Planning Center Online People API. Built with a class-based architecture, comprehensive error handling, and advanced features like person matching and batch operations.
 
@@ -31,19 +31,25 @@ import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 const client = new PcoClient({
   auth: {
     type: 'personal_access_token',
-    personalAccessToken: 'your-token'
+  personalAccessToken: 'your-token'
   }
 });
 
-// OAuth 2.0
+// OAuth 2.0 (refresh token handling required)
 const client = new PcoClient({
   auth: {
     type: 'oauth',
     accessToken: 'your-access-token',
     refreshToken: 'your-refresh-token',
+    // REQUIRED: Handle token refresh to prevent token loss
     onRefresh: async (tokens) => {
       // Save new tokens to your database
       await saveTokensToDatabase(userId, tokens);
+    },
+    // REQUIRED: Handle refresh failures
+    onRefreshFailure: async (error) => {
+      console.error('Token refresh failed:', error.message);
+      await clearUserTokens(userId);
     }
   }
 });
@@ -207,7 +213,16 @@ const client = await manager.getClient('user-id', {
   auth: {
     type: 'oauth',
     accessToken: userToken,
-    refreshToken: userRefreshToken
+    refreshToken: userRefreshToken,
+    // REQUIRED: Handle token refresh to prevent token loss
+    onRefresh: async (tokens) => {
+      await saveTokensToDatabase(userId, tokens);
+    },
+    // REQUIRED: Handle refresh failures
+    onRefreshFailure: async (error) => {
+      console.error('Token refresh failed:', error.message);
+      await clearUserTokens(userId);
+    }
   }
 });
 ```
@@ -231,6 +246,44 @@ await client.workflows.sendEmailWorkflowCard('person-id', 'card-id', {
   subject: 'Follow up',
   note: 'Thank you for your interest'
 });
+```
+
+### Campus Management
+
+```typescript
+// Get all campuses
+const campuses = await client.campus.getAll();
+
+// Get specific campus
+const campus = await client.campus.getById('campus-id');
+
+// Create new campus
+const newCampus = await client.campus.create({
+  description: 'Main Campus',
+  street: '123 Church Street',
+  city: 'Anytown',
+  state: 'CA',
+  zip: '12345',
+  country: 'US',
+  phone_number: '555-123-4567',
+  website: 'https://maincampus.example.com',
+  twenty_four_hour_time: false,
+  date_format: 1,
+  church_center_enabled: true
+});
+
+// Update campus
+const updatedCampus = await client.campus.update('campus-id', {
+  city: 'Updated City',
+  phone_number: '555-987-6543'
+});
+
+// Get campus lists and service times
+const campusLists = await client.campus.getLists('campus-id');
+const serviceTimes = await client.campus.getServiceTimes('campus-id');
+
+// Delete campus
+await client.campus.delete('campus-id');
 ```
 
 ### Custom Fields
@@ -376,7 +429,17 @@ npm run test:coverage
 - **[Examples](./EXAMPLES.md)** - Real-world examples
 - **[Migration Guide](./MIGRATION_V2.md)** - Migrating from v1.x
 
-## 🔄 Migration from v1.x
+## 🔄 Migration
+
+### From v2.1.0 to v2.2.0
+
+**✅ New Feature**: Added comprehensive Campus management support. See the [Changelog](../CHANGELOG.md#220---2025-01-17) for details.
+
+### From v2.0.0 to v2.1.0
+
+**⚠️ Breaking Change**: OAuth 2.0 authentication now requires refresh token handling. See the [Changelog](../CHANGELOG.md#210---2025-01-17) for migration details.
+
+### From v1.x to v2.0.0
 
 The v2.0.0 release includes breaking changes. See the [Migration Guide](./MIGRATION_V2.md) for detailed migration instructions.
 

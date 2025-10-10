@@ -154,9 +154,9 @@ export class PcoClientManager {
         // Create a hash of the configuration
         const configStr = JSON.stringify({
             authType: config.auth.type,
-            hasAccessToken: !!config.auth.accessToken,
-            hasRefreshToken: !!config.auth.refreshToken,
-            hasPersonalAccessToken: !!config.auth.personalAccessToken,
+            hasAccessToken: config.auth.type === 'oauth' ? !!config.auth.accessToken : false,
+            hasRefreshToken: config.auth.type === 'oauth' ? !!config.auth.refreshToken : false,
+            hasPersonalAccessToken: config.auth.type === 'personal_access_token' ? !!config.auth.personalAccessToken : false,
             baseURL: config.baseURL,
             timeout: config.timeout,
         });
@@ -177,11 +177,22 @@ export class PcoClientManager {
      */
     private hasConfigChanged(oldConfig: PcoClientConfig, newConfig: PcoClientConfig): boolean {
         // Compare key configuration properties
+        if (oldConfig.auth.type !== newConfig.auth.type) {
+            return true;
+        }
+
+        if (oldConfig.auth.type === 'oauth' && newConfig.auth.type === 'oauth') {
+            return (
+                oldConfig.auth.accessToken !== newConfig.auth.accessToken ||
+                oldConfig.auth.refreshToken !== newConfig.auth.refreshToken
+            );
+        }
+
+        if (oldConfig.auth.type === 'personal_access_token' && newConfig.auth.type === 'personal_access_token') {
+            return oldConfig.auth.personalAccessToken !== newConfig.auth.personalAccessToken;
+        }
+
         return (
-            oldConfig.auth.type !== newConfig.auth.type ||
-            oldConfig.auth.accessToken !== newConfig.auth.accessToken ||
-            oldConfig.auth.refreshToken !== newConfig.auth.refreshToken ||
-            oldConfig.auth.personalAccessToken !== newConfig.auth.personalAccessToken ||
             oldConfig.baseURL !== newConfig.baseURL ||
             oldConfig.timeout !== newConfig.timeout
         );

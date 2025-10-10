@@ -616,6 +616,40 @@ export type OrganizationStatisticsList =
 export type OrganizationStatisticSingle =
   Response<OrganizationStatisticResource>;
 
+// ===== Campus Resource =====
+
+export interface CampusAttributes extends Attributes {
+  latitude?: number;
+  longitude?: number;
+  description?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  phone_number?: string;
+  website?: string;
+  twenty_four_hour_time?: boolean;
+  date_format?: number;
+  church_center_enabled?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CampusRelationships {
+  organization?: Relationship;
+}
+
+export interface CampusResource
+  extends ResourceObject<
+    'Campus',
+    CampusAttributes,
+    CampusRelationships
+  > { }
+
+export type CampusesList = Paginated<CampusResource>;
+export type CampusSingle = Response<CampusResource>;
+
 // ===== Included union for People =====
 
 export type PeopleIncluded =
@@ -625,4 +659,5 @@ export type PeopleIncluded =
   | HouseholdResource
   | SocialProfileResource
   | FieldDatumResource
-  | TabResource;
+  | TabResource
+  | CampusResource;

@@ -7,7 +7,12 @@ export { PcoClient } from './client';
 export { PcoClientManager } from './client-manager';
 
 // Configuration types
-export type { PcoClientConfig } from './types/client';
+export type {
+  PcoClientConfig,
+  PcoAuthConfig,
+  PersonalAccessTokenAuth,
+  OAuthAuth
+} from './types/client';
 
 // Event system
 export type { PcoEvent, EventHandler, EventType } from './types/events';
@@ -71,6 +76,9 @@ export type {
   ListAttributes,
   OrganizationResource,
   OrganizationAttributes,
+  CampusResource,
+  CampusAttributes,
+  CampusesList,
 } from './types';
 
 // ===== v1.x Compatibility Exports (Deprecated) =====

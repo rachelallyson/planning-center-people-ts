@@ -48,15 +48,26 @@ const client = new PcoClient({
 ### Configuration
 
 ```typescript
+// Personal Access Token configuration
+interface PersonalAccessTokenAuth {
+  type: 'personal_access_token';
+  personalAccessToken: string;
+}
+
+// OAuth 2.0 configuration (refresh token handling required)
+interface OAuthAuth {
+  type: 'oauth';
+  accessToken: string;
+  refreshToken: string;
+  onRefresh: (tokens: { accessToken: string; refreshToken: string }) => Promise<void>;
+  onRefreshFailure: (error: Error) => Promise<void>;
+}
+
+// Union type for authentication
+type PcoAuthConfig = PersonalAccessTokenAuth | OAuthAuth;
+
 interface PcoClientConfig {
-  auth: {
-    type: 'personal_access_token' | 'oauth';
-    personalAccessToken?: string;
-    accessToken?: string;
-    refreshToken?: string;
-    onRefresh?: (tokens: TokenResponse) => Promise<void>;
-    onRefreshFailure?: (error: Error) => Promise<void>;
-  };
+  auth: PcoAuthConfig;
   rateLimit?: {
     maxRequests: number;
     perMilliseconds: number;
@@ -1061,6 +1072,117 @@ Delete a list category.
 await client.lists.deleteListCategory('category-id');
 ```
 
+## Campus Module
+
+Access via `client.campus`
+
+### Campus Operations
+
+#### `getAll(params?: GetCampusesParams): Promise<Paginated<CampusResource>>`
+
+Get all campuses with optional filtering and pagination.
+
+**Parameters:**
+
+- `params.where` - Filter criteria
+- `params.include` - Related resources to include
+- `params.per_page` - Number of results per page
+- `params.page` - Page number
+
+**Example:**
+
+```typescript
+const campuses = await client.campus.getAll({
+  per_page: 50,
+  include: ['organization']
+});
+```
+
+#### `getById(id: string, include?: string[]): Promise<CampusResource>`
+
+Get a specific campus by ID.
+
+**Example:**
+
+```typescript
+const campus = await client.campus.getById('campus-id', ['organization']);
+```
+
+#### `create(data: CampusAttributes): Promise<CampusResource>`
+
+Create a new campus.
+
+**Example:**
+
+```typescript
+const campus = await client.campus.create({
+  description: 'Main Campus',
+  street: '123 Church Street',
+  city: 'Anytown',
+  state: 'CA',
+  zip: '12345',
+  country: 'US',
+  phone_number: '555-123-4567',
+  website: 'https://maincampus.example.com',
+  twenty_four_hour_time: false,
+  date_format: 1,
+  church_center_enabled: true
+});
+```
+
+#### `update(id: string, data: Partial<CampusAttributes>): Promise<CampusResource>`
+
+Update an existing campus.
+
+**Example:**
+
+```typescript
+const updatedCampus = await client.campus.update('campus-id', {
+  city: 'Updated City',
+  phone_number: '555-987-6543'
+});
+```
+
+#### `delete(id: string): Promise<void>`
+
+Delete a campus.
+
+**Example:**
+
+```typescript
+await client.campus.delete('campus-id');
+```
+
+#### `getLists(campusId: string, params?: GetListsParams): Promise<Paginated<ListResource>>`
+
+Get lists for a specific campus.
+
+**Example:**
+
+```typescript
+const lists = await client.campus.getLists('campus-id');
+```
+
+#### `getServiceTimes(campusId: string, params?: GetServiceTimesParams): Promise<Paginated<ServiceTimeResource>>`
+
+Get service times for a specific campus.
+
+**Example:**
+
+```typescript
+const serviceTimes = await client.campus.getServiceTimes('campus-id');
+```
+
+#### `getAllPages(params?: GetCampusesParams): Promise<CampusResource[]>`
+
+Get all campuses with automatic pagination.
+
+**Example:**
+
+```typescript
+const allCampuses = await client.campus.getAllPages();
+```
+
 ## Organization Module
 
 Access via `client.organization`
@@ -1303,6 +1425,35 @@ interface PersonRelationships {
   addresses?: Relationship;
   household?: Relationship;
   // ... other relationships
+}
+
+interface CampusResource {
+  id: string;
+  type: 'Campus';
+  attributes: CampusAttributes;
+  relationships?: CampusRelationships;
+}
+
+interface CampusAttributes {
+  latitude?: number;
+  longitude?: number;
+  description?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  phone_number?: string;
+  website?: string;
+  twenty_four_hour_time?: boolean;
+  date_format?: number;
+  church_center_enabled?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface CampusRelationships {
+  organization?: Relationship;
 }
 ```
 

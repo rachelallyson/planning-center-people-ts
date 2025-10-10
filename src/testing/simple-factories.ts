@@ -342,6 +342,9 @@ export function createTestClient(overrides: SimpleMockClientConfig = {}): Simple
         auth: {
             type: 'oauth',
             accessToken: 'test-token',
+            refreshToken: 'test-refresh-token',
+            onRefresh: async () => { },
+            onRefreshFailure: async () => { },
         },
     };
 
@@ -412,6 +415,9 @@ export function createErrorMockClient(errorType: 'network' | 'auth' | 'validatio
         auth: {
             type: 'oauth',
             accessToken: 'test-token',
+            refreshToken: 'test-refresh-token',
+            onRefresh: async () => { },
+            onRefreshFailure: async () => { },
         },
     };
 
@@ -436,6 +442,9 @@ export function createSlowMockClient(delayMs: number = 1000): SimpleMockPcoClien
         auth: {
             type: 'oauth',
             accessToken: 'test-token',
+            refreshToken: 'test-refresh-token',
+            onRefresh: async () => { },
+            onRefreshFailure: async () => { },
         },
     };
 

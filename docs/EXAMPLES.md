@@ -8,12 +8,13 @@ This guide provides comprehensive examples for using the Planning Center People 
 2. [People Management](#people-management)
 3. [Contact Management](#contact-management)
 4. [Workflow Management](#workflow-management)
-5. [Custom Fields](#custom-fields)
-6. [Batch Operations](#batch-operations)
-7. [Person Matching](#person-matching)
-8. [Event Monitoring](#event-monitoring)
-9. [Error Handling](#error-handling)
-10. [Advanced Patterns](#advanced-patterns)
+5. [Campus Management](#campus-management)
+6. [Custom Fields](#custom-fields)
+7. [Batch Operations](#batch-operations)
+8. [Person Matching](#person-matching)
+9. [Event Monitoring](#event-monitoring)
+10. [Error Handling](#error-handling)
+11. [Advanced Patterns](#advanced-patterns)
 
 ## Basic Setup
 
@@ -30,15 +31,21 @@ const client = new PcoClient({
   }
 });
 
-// OAuth 2.0
+// OAuth 2.0 (refresh token handling required)
 const client = new PcoClient({
   auth: {
     type: 'oauth',
     accessToken: process.env.PCO_ACCESS_TOKEN!,
     refreshToken: process.env.PCO_REFRESH_TOKEN!,
+    // REQUIRED: Handle token refresh to prevent token loss
     onRefresh: async (tokens) => {
       // Save new tokens to your database
       await saveTokensToDatabase(userId, tokens);
+    },
+    // REQUIRED: Handle refresh failures
+    onRefreshFailure: async (error) => {
+      console.error('Token refresh failed:', error.message);
+      await clearUserTokens(userId);
     }
   }
 });
@@ -390,6 +397,89 @@ const notes = await client.workflows.getWorkflowCardNotes('person-id', 'card-id'
 const note = await client.workflows.createWorkflowCardNote('person-id', 'card-id', {
   note: 'Called and left voicemail. Will try again tomorrow.'
 });
+```
+
+## Campus Management
+
+### Basic Campus Operations
+
+```typescript
+// Get all campuses
+const campuses = await client.campus.getAll();
+
+// Get specific campus
+const campus = await client.campus.getById('campus-id');
+
+// Create new campus
+const newCampus = await client.campus.create({
+  description: 'Main Campus',
+  street: '123 Church Street',
+  city: 'Anytown',
+  state: 'CA',
+  zip: '12345',
+  country: 'US',
+  phone_number: '555-123-4567',
+  website: 'https://maincampus.example.com',
+  twenty_four_hour_time: false,
+  date_format: 1,
+  church_center_enabled: true
+});
+
+// Update campus
+const updatedCampus = await client.campus.update('campus-id', {
+  city: 'Updated City',
+  phone_number: '555-987-6543'
+});
+
+// Delete campus
+await client.campus.delete('campus-id');
+```
+
+### Campus Lists and Service Times
+
+```typescript
+// Get lists for a specific campus
+const campusLists = await client.campus.getLists('campus-id');
+
+// Get service times for a specific campus
+const serviceTimes = await client.campus.getServiceTimes('campus-id');
+
+// Get all campuses with pagination
+const allCampuses = await client.campus.getAllPages();
+```
+
+### Campus Management with Error Handling
+
+```typescript
+try {
+  // Create campus with validation
+  const campus = await client.campus.create({
+    description: 'New Campus Location',
+    street: '456 New Street',
+    city: 'New City',
+    state: 'NC',
+    zip: '54321',
+    country: 'US'
+  });
+  
+  console.log('Campus created:', campus.id);
+  
+  // Update campus
+  const updatedCampus = await client.campus.update(campus.id, {
+    phone_number: '555-111-2222'
+  });
+  
+  console.log('Campus updated successfully');
+  
+} catch (error) {
+  if (error instanceof PcoApiError) {
+    console.error('API Error:', error.message);
+    console.error('Status:', error.status);
+    console.error('Details:', error.details);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
 ```
 
 ## Custom Fields

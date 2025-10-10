@@ -5,6 +5,148 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-01-17
+
+### 🏢 **NEW FEATURE - Campus Management Support**
+
+This release adds comprehensive Campus management functionality to the Planning Center People API client.
+
+### Added
+
+#### **🏢 Campus Module**
+
+- **Complete Campus CRUD Operations**: Create, read, update, and delete campuses
+- **Campus-Specific Operations**: Get campus lists and service times
+- **Type-Safe Campus Resource**: Full TypeScript support for campus attributes and relationships
+- **Pagination Support**: Automatic pagination for campus listings
+
+#### **📋 Campus Operations**
+
+- `client.campus.getAll()` - Get all campuses with filtering and pagination
+- `client.campus.getById(id, include?)` - Get specific campus by ID
+- `client.campus.create(data)` - Create new campus
+- `client.campus.update(id, data)` - Update existing campus
+- `client.campus.delete(id)` - Delete campus
+- `client.campus.getLists(campusId)` - Get lists for a specific campus
+- `client.campus.getServiceTimes(campusId)` - Get service times for a specific campus
+- `client.campus.getAllPagesPaginated()` - Get all campuses with automatic pagination
+
+#### **🏗️ Campus Resource Structure**
+
+- **Location Data**: `latitude`, `longitude`, `street`, `city`, `state`, `zip`, `country`
+- **Contact Information**: `phone_number`, `website`
+- **Settings**: `twenty_four_hour_time`, `date_format`, `church_center_enabled`
+- **Metadata**: `description`, `created_at`, `updated_at`
+
+### Documentation
+
+- **Updated README.md** with Campus Management examples
+- **Updated EXAMPLES.md** with comprehensive Campus usage patterns
+- **Updated API_REFERENCE.md** with complete Campus Module documentation
+- **Added Campus types** to resource types documentation
+
+### Testing
+
+- **Integration Tests**: Complete test suite for Campus operations
+- **Type Safety**: Full TypeScript coverage for Campus resources
+- **Error Handling**: Comprehensive error handling for Campus operations
+
+### Example Usage
+
+```typescript
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
+
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: 'your-token'
+  }
+});
+
+// Get all campuses
+const campuses = await client.campus.getAll();
+
+// Create new campus
+const newCampus = await client.campus.create({
+  description: 'Main Campus',
+  street: '123 Church Street',
+  city: 'Anytown',
+  state: 'CA',
+  zip: '12345',
+  country: 'US',
+  phone_number: '555-123-4567',
+  website: 'https://maincampus.example.com',
+  twenty_four_hour_time: false,
+  date_format: 1,
+  church_center_enabled: true
+});
+
+// Get campus-specific data
+const campusLists = await client.campus.getLists('campus-id');
+const serviceTimes = await client.campus.getServiceTimes('campus-id');
+```
+
+## [2.1.0] - 2025-01-17
+
+### 🔒 **SECURITY RELEASE - Required Refresh Token Handling**
+
+This release addresses a critical security issue where OAuth 2.0 clients could lose access when tokens expire without proper refresh handling.
+
+### Breaking Changes
+
+- **OAuth 2.0 Authentication**: `onRefresh` and `onRefreshFailure` callbacks are now **required** for OAuth configurations
+- **Type Safety**: Enhanced type-safe authentication configuration prevents invalid configurations at compile time
+
+### Security
+
+- **CRITICAL**: OAuth 2.0 authentication now requires refresh token handling to prevent token loss
+- **BREAKING**: Type-safe authentication configuration enforces required fields
+- Enhanced token refresh implementation with proper error handling
+- Improved authentication type safety with union types
+
+### Fixed
+
+- Fixed person matching to properly handle default fuzzy strategy
+- Fixed mock client to support createWithContacts method
+- Fixed event system tests to work with mock client
+- Fixed phone number builder in mock response builder
+
+### Migration from v2.0.0
+
+**Before (v2.0.0):**
+
+```typescript
+const client = new PcoClient({
+  auth: {
+    type: 'oauth',
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token'
+    // Missing required callbacks - this will now cause TypeScript errors
+  }
+});
+```
+
+**After (v2.1.0):**
+
+```typescript
+const client = new PcoClient({
+  auth: {
+    type: 'oauth',
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+    // REQUIRED: Handle token refresh to prevent token loss
+    onRefresh: async (tokens) => {
+      await saveTokensToDatabase(userId, tokens);
+    },
+    // REQUIRED: Handle refresh failures
+    onRefreshFailure: async (error) => {
+      console.error('Token refresh failed:', error.message);
+      await clearUserTokens(userId);
+    }
+  }
+});
+```
+
 ## [2.0.0] - 2025-01-17
 
 ### 🚀 **MAJOR RELEASE - Complete API Redesign**
@@ -120,6 +262,10 @@ const person = await client.people.create({ first_name: 'John', last_name: 'Doe'
 - **Error Handling**: Improved error handling and retry logic
 - **Rate Limiting**: Fixed rate limiting edge cases
 - **Authentication**: Resolved token refresh and persistence issues
+- Fixed person matching to properly handle default fuzzy strategy
+- Fixed mock client to support createWithContacts method
+- Fixed event system tests to work with mock client
+- Fixed phone number builder in mock response builder
 
 ## [1.1.0] - 2025-10-08
 
