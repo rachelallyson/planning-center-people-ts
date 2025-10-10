@@ -1,6 +1,8 @@
-# @planning-center-people-ts
+# @rachelallyson/planning-center-people-ts
 
-A strictly typed TypeScript client for Planning Center Online People API, built with modern functional programming principles and comprehensive error handling.
+A modern, type-safe TypeScript library for interacting with the Planning Center Online People API. Built with a class-based architecture, comprehensive error handling, and advanced features like person matching and batch operations.
+
+> **📖 For the latest documentation and examples, see [docs/README.md](docs/README.md)**
 
 ## Features
 

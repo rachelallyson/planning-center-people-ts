@@ -1,6 +1,6 @@
-# API Usage Guide - v2.0.0
+# API Usage Guide - v2.3.0
 
-This comprehensive guide covers all aspects of using the `@rachelallyson/planning-center-people-ts` v2.0.0 package for interacting with the Planning Center Online People API.
+This comprehensive guide covers all aspects of using the `@rachelallyson/planning-center-people-ts` v2.3.0 package for interacting with the Planning Center Online People API.
 
 ## Table of Contents
 

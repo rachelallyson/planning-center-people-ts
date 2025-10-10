@@ -5,6 +5,132 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-01-17
+
+### 🚀 **NEW FEATURES - ServiceTime, Forms, and Reports Management**
+
+This release adds three high-priority modules to extend the Planning Center People API client with essential church management functionality.
+
+### Added
+
+#### **⏰ ServiceTime Module**
+
+- **Campus-Scoped ServiceTime Operations**: Full CRUD operations for service times within campuses
+- **Type-Safe ServiceTime Resource**: Complete TypeScript support for service time attributes and relationships
+- **Pagination Support**: Automatic pagination for service time listings
+
+**ServiceTime Operations:**
+
+- `client.serviceTime.getAll(campusId, params?)` - Get all service times for a campus
+- `client.serviceTime.getById(campusId, id, include?)` - Get specific service time by ID
+- `client.serviceTime.create(campusId, data)` - Create new service time
+- `client.serviceTime.update(campusId, id, data)` - Update existing service time
+- `client.serviceTime.delete(campusId, id)` - Delete service time
+- `client.serviceTime.getAllPagesPaginated(campusId, params?)` - Get all service times with pagination
+
+**ServiceTime Resource Structure:**
+
+- **Time Data**: `start_time`, `day` (0-6 for Sunday-Saturday)
+- **Metadata**: `description`, `created_at`, `updated_at`
+- **Relationships**: `organization`, `campus`
+
+#### **📝 Forms Module**
+
+- **Comprehensive Forms Operations**: Read operations for forms, categories, fields, options, and submissions
+- **Type-Safe Form Resources**: Complete TypeScript support for all form-related resources
+- **Form Data Analysis**: Tools for analyzing form submissions and field data
+
+**Forms Operations:**
+
+- `client.forms.getAll(params?)` - Get all forms
+- `client.forms.getById(id, include?)` - Get specific form by ID
+- `client.forms.getFormCategory(formId)` - Get form category
+- `client.forms.getFormFields(formId, params?)` - Get form fields
+- `client.forms.getFormFieldOptions(formFieldId, params?)` - Get form field options
+- `client.forms.getFormSubmissions(formId, params?)` - Get form submissions
+- `client.forms.getFormSubmissionById(submissionId, include?)` - Get specific form submission
+- `client.forms.getFormSubmissionValues(submissionId, params?)` - Get form submission values
+
+**Forms Resource Structure:**
+
+- **Form**: `name`, `description`, `active`, `archived_at`
+- **FormCategory**: `name`, `created_at`, `updated_at`
+- **FormField**: `name`, `field_type`, `required`, `sequence`
+- **FormFieldOption**: `value`, `sequence`
+- **FormSubmission**: `submitted_at`, `created_at`, `updated_at`
+- **FormSubmissionValue**: `value`, `created_at`, `updated_at`
+
+#### **📊 Reports Module**
+
+- **Complete Reports CRUD Operations**: Create, read, update, and delete reports
+- **Report Metadata**: Get report creator and updater information
+- **Type-Safe Report Resource**: Full TypeScript support for report attributes and relationships
+- **Pagination Support**: Automatic pagination for report listings
+
+**Reports Operations:**
+
+- `client.reports.getAll(params?)` - Get all reports
+- `client.reports.getById(id, include?)` - Get specific report by ID
+- `client.reports.create(data)` - Create new report
+- `client.reports.update(id, data)` - Update existing report
+- `client.reports.delete(id)` - Delete report
+- `client.reports.getCreatedBy(reportId)` - Get report creator
+- `client.reports.getUpdatedBy(reportId)` - Get report updater
+- `client.reports.getAllPagesPaginated(params?)` - Get all reports with pagination
+
+**Reports Resource Structure:**
+
+- **Report Data**: `name`, `body`
+- **Metadata**: `created_at`, `updated_at`
+- **Relationships**: `organization`, `created_by`, `updated_by`
+
+### Documentation
+
+- **Updated README.md** with ServiceTime, Forms, and Reports Management examples
+- **Updated EXAMPLES.md** with comprehensive usage patterns for all three modules
+- **Updated API_REFERENCE.md** with complete module documentation and resource types
+- **Added new resource types** to TypeScript exports
+
+### Testing
+
+- **Integration Tests**: Complete test suites for ServiceTime, Forms, and Reports operations
+- **Type Safety**: Full TypeScript coverage for all new resources
+- **Error Handling**: Comprehensive error handling for all module operations
+- **Campus-Scoped Testing**: ServiceTime tests properly handle campus-scoped operations
+
+### Example Usage
+
+```typescript
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
+
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: 'your-token'
+  }
+});
+
+// ServiceTime Management
+const serviceTimes = await client.serviceTime.getAll('campus-id');
+const newServiceTime = await client.serviceTime.create('campus-id', {
+  start_time: '09:00:00',
+  day: 0, // Sunday
+  description: 'Main Service'
+});
+
+// Forms Management
+const forms = await client.forms.getAll();
+const formFields = await client.forms.getFormFields('form-id');
+const formSubmissions = await client.forms.getFormSubmissions('form-id');
+
+// Reports Management
+const reports = await client.reports.getAll();
+const newReport = await client.reports.create({
+  name: 'Monthly Attendance Report',
+  body: 'Report showing monthly attendance statistics'
+});
+```
+
 ## [2.2.0] - 2025-01-17
 
 ### 🏢 **NEW FEATURE - Campus Management Support**

@@ -1,6 +1,6 @@
-# Examples - v2.0.0
+# Examples - v2.3.0
 
-This guide provides comprehensive examples for using the Planning Center People TypeScript library v2.0.0 in real-world scenarios.
+This guide provides comprehensive examples for using the Planning Center People TypeScript library v2.3.0 in real-world scenarios.
 
 ## Table of Contents
 
@@ -599,7 +599,7 @@ async function addMultipleContacts(personId: string, contacts: any[]) {
       }
       
       results.push({ success: true, result });
-          } catch (error) {
+    } catch (error) {
       results.push({ success: false, error: error.message });
     }
   }
@@ -672,7 +672,7 @@ async function matchMultiplePeople(peopleData: any[]) {
         result: match,
         status: 'success' 
       });
-  } catch (error) {
+          } catch (error) {
       results.push({ 
         input: personData, 
         error: error.message,
@@ -801,7 +801,7 @@ async function executeWithRetry<T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
-    } catch (error) {
+  } catch (error) {
       if (attempt === maxRetries) {
         throw error;
       }
@@ -1065,6 +1065,316 @@ const monitor = new ApiMonitor(client, observer);
 observer.subscribe((event) => {
   console.log(`Event: ${event.type}`, event.data);
 });
+```
+
+## ServiceTime Management
+
+### Basic ServiceTime Operations
+
+```typescript
+// Get all service times for a campus
+const serviceTimes = await client.serviceTime.getAll('campus-id');
+
+// Get specific service time
+const serviceTime = await client.serviceTime.getById('campus-id', 'service-time-id');
+
+// Create new service time
+const newServiceTime = await client.serviceTime.create('campus-id', {
+  start_time: '09:00:00',
+  day: 0, // Sunday
+  description: 'Main Service'
+});
+
+// Update service time
+const updatedServiceTime = await client.serviceTime.update('campus-id', 'service-time-id', {
+  start_time: '10:30:00',
+  description: 'Updated Service Time'
+});
+
+// Delete service time
+await client.serviceTime.delete('campus-id', 'service-time-id');
+```
+
+### ServiceTime Management with Error Handling
+
+```typescript
+try {
+  // Create service time with validation
+  const serviceTime = await client.serviceTime.create('campus-id', {
+    start_time: '09:00:00',
+    day: 0,
+    description: 'Sunday Morning Service'
+  });
+  
+  console.log('Service time created:', serviceTime.id);
+  
+  // Update service time
+  const updatedServiceTime = await client.serviceTime.update('campus-id', serviceTime.id, {
+    start_time: '10:00:00'
+  });
+  
+  console.log('Service time updated successfully');
+  
+} catch (error) {
+  if (error instanceof PcoApiError) {
+    console.error('API Error:', error.message);
+    console.error('Status:', error.status);
+    console.error('Details:', error.details);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+### ServiceTime Pagination
+
+```typescript
+// Get all service times with pagination
+const allServiceTimes = await client.serviceTime.getAllPagesPaginated('campus-id', {
+  per_page: 25
+});
+
+console.log(`Found ${allServiceTimes.data.length} service times`);
+console.log(`Total pages: ${allServiceTimes.pagination?.total_pages}`);
+```
+
+## Forms Management
+
+### Basic Forms Operations
+
+```typescript
+// Get all forms
+const forms = await client.forms.getAll();
+
+// Get specific form
+const form = await client.forms.getById('form-id');
+
+// Get form category
+const formCategory = await client.forms.getFormCategory('form-id');
+
+// Get form fields
+const formFields = await client.forms.getFormFields('form-id');
+
+// Get form field options
+const formFieldOptions = await client.forms.getFormFieldOptions('form-field-id');
+
+// Get form submissions
+const formSubmissions = await client.forms.getFormSubmissions('form-id');
+
+// Get form submission values
+const submissionValues = await client.forms.getFormSubmissionValues('submission-id');
+```
+
+### Forms Data Analysis
+
+```typescript
+// Analyze form submissions
+async function analyzeFormSubmissions(formId: string) {
+  try {
+    // Get form details
+    const form = await client.forms.getById(formId);
+    console.log(`Analyzing form: ${form.attributes?.name}`);
+    
+    // Get form fields
+    const formFields = await client.forms.getFormFields(formId);
+    console.log(`Form has ${formFields.data.length} fields`);
+    
+    // Get form submissions
+    const formSubmissions = await client.forms.getFormSubmissions(formId);
+    console.log(`Form has ${formSubmissions.data.length} submissions`);
+    
+    // Analyze each submission
+    for (const submission of formSubmissions.data) {
+      const submissionValues = await client.forms.getFormSubmissionValues(submission.id || '');
+      
+      console.log(`Submission ${submission.id}:`);
+      submissionValues.data.forEach(value => {
+        console.log(`  Field: ${value.relationships?.form_field?.data?.id}, Value: ${value.attributes?.value}`);
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error analyzing form submissions:', error);
+  }
+}
+
+// Usage
+await analyzeFormSubmissions('form-id');
+```
+
+### Forms with Error Handling
+
+```typescript
+try {
+  // Get form with includes
+  const form = await client.forms.getById('form-id', ['form_category']);
+  
+  // Get form fields
+  const formFields = await client.forms.getFormFields('form-id');
+  
+  if (formFields.data.length === 0) {
+    console.log('No fields found for this form');
+    return;
+  }
+  
+  // Get field options for first field
+  const firstField = formFields.data[0];
+  const fieldOptions = await client.forms.getFormFieldOptions(firstField.id || '');
+  
+  console.log(`Field "${firstField.attributes?.name}" has ${fieldOptions.data.length} options`);
+  
+  } catch (error) {
+  if (error instanceof PcoApiError) {
+    console.error('API Error:', error.message);
+    console.error('Status:', error.status);
+    } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+## Reports Management
+
+### Basic Reports Operations
+
+```typescript
+// Get all reports
+const reports = await client.reports.getAll();
+
+// Get specific report
+const report = await client.reports.getById('report-id');
+
+// Create new report
+const newReport = await client.reports.create({
+  name: 'Monthly Attendance Report',
+  body: 'Report showing monthly attendance statistics'
+});
+
+// Update report
+const updatedReport = await client.reports.update('report-id', {
+  name: 'Updated Report Name',
+  body: 'Updated report content'
+});
+
+// Get report creator and updater
+const creator = await client.reports.getCreatedBy('report-id');
+const updater = await client.reports.getUpdatedBy('report-id');
+
+// Delete report
+await client.reports.delete('report-id');
+```
+
+### Reports Management with Error Handling
+
+```typescript
+try {
+  // Create report with validation
+  const report = await client.reports.create({
+    name: 'Weekly Service Report',
+    body: 'Report showing weekly service attendance and statistics'
+  });
+  
+  console.log('Report created:', report.id);
+  
+  // Update report
+  const updatedReport = await client.reports.update(report.id, {
+    body: 'Updated report with new data'
+  });
+  
+  console.log('Report updated successfully');
+  
+  // Get report metadata
+  try {
+    const creator = await client.reports.getCreatedBy(report.id);
+    console.log('Report created by:', creator.attributes?.first_name, creator.attributes?.last_name);
+    } catch (error) {
+    console.warn('Could not get report creator:', error);
+  }
+  
+} catch (error) {
+  if (error instanceof PcoApiError) {
+    console.error('API Error:', error.message);
+    console.error('Status:', error.status);
+    console.error('Details:', error.details);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+### Reports Pagination and Filtering
+
+```typescript
+// Get all reports with pagination
+const allReports = await client.reports.getAllPagesPaginated({
+  per_page: 50
+});
+
+console.log(`Found ${allReports.data.length} reports`);
+
+// Filter reports by name
+const filteredReports = await client.reports.getAll({
+  where: { name: 'Monthly' }
+});
+
+console.log(`Found ${filteredReports.data.length} reports with "Monthly" in the name`);
+```
+
+### Report Template System
+
+```typescript
+// Report template system
+class ReportTemplate {
+  constructor(private client: PcoClient) {}
+  
+  async createAttendanceReport(month: string, year: number) {
+    const reportName = `Attendance Report - ${month} ${year}`;
+    const reportBody = `
+# ${reportName}
+
+## Summary
+This report shows attendance statistics for ${month} ${year}.
+
+## Data Sources
+- Service times
+- Campus attendance
+- Volunteer participation
+
+## Generated
+Generated on ${new Date().toISOString()}
+    `;
+    
+    return await this.client.reports.create({
+      name: reportName,
+      body: reportBody
+    });
+  }
+  
+  async createVolunteerReport() {
+    const reportName = `Volunteer Report - ${new Date().toLocaleDateString()}`;
+    const reportBody = `
+# ${reportName}
+
+## Volunteer Statistics
+- Active volunteers
+- Service participation
+- Training completion
+
+## Generated
+Generated on ${new Date().toISOString()}
+    `;
+    
+    return await this.client.reports.create({
+      name: reportName,
+      body: reportBody
+    });
+  }
+}
+
+// Usage
+const reportTemplate = new ReportTemplate(client);
+const attendanceReport = await reportTemplate.createAttendanceReport('January', 2025);
+const volunteerReport = await reportTemplate.createVolunteerReport();
 ```
 
 ## Next Steps

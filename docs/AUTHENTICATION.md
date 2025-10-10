@@ -1,6 +1,6 @@
-# Authentication Guide - v2.0.0
+# Authentication Guide - v2.3.0
 
-This guide covers all authentication methods supported by the Planning Center People TypeScript library v2.0.0, including setup, token management, and best practices.
+This guide covers all authentication methods supported by the Planning Center People TypeScript library v2.3.0, including setup, token management, and best practices.
 
 ## Authentication Methods Overview
 

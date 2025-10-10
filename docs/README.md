@@ -1,4 +1,4 @@
-# Planning Center People TypeScript Library - v2.2.0
+# Planning Center People TypeScript Library - v2.3.0
 
 A modern, type-safe TypeScript library for interacting with the Planning Center Online People API. Built with a class-based architecture, comprehensive error handling, and advanced features like person matching and batch operations.
 
@@ -286,6 +286,86 @@ const serviceTimes = await client.campus.getServiceTimes('campus-id');
 await client.campus.delete('campus-id');
 ```
 
+### ServiceTime Management
+
+```typescript
+// Get all service times for a campus
+const serviceTimes = await client.serviceTime.getAll('campus-id');
+
+// Get specific service time
+const serviceTime = await client.serviceTime.getById('campus-id', 'service-time-id');
+
+// Create new service time
+const newServiceTime = await client.serviceTime.create('campus-id', {
+  start_time: '09:00:00',
+  day: 0, // Sunday
+  description: 'Main Service'
+});
+
+// Update service time
+const updatedServiceTime = await client.serviceTime.update('campus-id', 'service-time-id', {
+  start_time: '10:30:00',
+  description: 'Updated Service Time'
+});
+
+// Delete service time
+await client.serviceTime.delete('campus-id', 'service-time-id');
+```
+
+### Forms Management
+
+```typescript
+// Get all forms
+const forms = await client.forms.getAll();
+
+// Get specific form
+const form = await client.forms.getById('form-id');
+
+// Get form category
+const formCategory = await client.forms.getFormCategory('form-id');
+
+// Get form fields
+const formFields = await client.forms.getFormFields('form-id');
+
+// Get form field options
+const formFieldOptions = await client.forms.getFormFieldOptions('form-field-id');
+
+// Get form submissions
+const formSubmissions = await client.forms.getFormSubmissions('form-id');
+
+// Get form submission values
+const submissionValues = await client.forms.getFormSubmissionValues('submission-id');
+```
+
+### Reports Management
+
+```typescript
+// Get all reports
+const reports = await client.reports.getAll();
+
+// Get specific report
+const report = await client.reports.getById('report-id');
+
+// Create new report
+const newReport = await client.reports.create({
+  name: 'Monthly Attendance Report',
+  body: 'Report showing monthly attendance statistics'
+});
+
+// Update report
+const updatedReport = await client.reports.update('report-id', {
+  name: 'Updated Report Name',
+  body: 'Updated report content'
+});
+
+// Get report creator and updater
+const creator = await client.reports.getCreatedBy('report-id');
+const updater = await client.reports.getUpdatedBy('report-id');
+
+// Delete report
+await client.reports.delete('report-id');
+```
+
 ### Custom Fields
 
 ```typescript
@@ -430,6 +510,10 @@ npm run test:coverage
 - **[Migration Guide](./MIGRATION_V2.md)** - Migrating from v1.x
 
 ## 🔄 Migration
+
+### From v2.2.0 to v2.3.0
+
+**✅ New Features**: Added comprehensive ServiceTime, Forms, and Reports management support. See the [Changelog](../CHANGELOG.md#230---2025-01-17) for details.
 
 ### From v2.1.0 to v2.2.0
 

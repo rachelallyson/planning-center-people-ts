@@ -650,6 +650,198 @@ export interface CampusResource
 export type CampusesList = Paginated<CampusResource>;
 export type CampusSingle = Response<CampusResource>;
 
+// ===== ServiceTime Resource =====
+
+export interface ServiceTimeAttributes extends Attributes {
+  start_time?: number; // Minutes from midnight (e.g., 540 for 9:00 AM)
+  day?: number | string; // Input: number (0-6), Output: string ('sunday', 'monday', etc.)
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ServiceTimeRelationships {
+  organization?: Relationship;
+  campus?: Relationship;
+}
+
+export interface ServiceTimeResource
+  extends ResourceObject<
+    'ServiceTime',
+    ServiceTimeAttributes,
+    ServiceTimeRelationships
+  > { }
+
+export type ServiceTimesList = Paginated<ServiceTimeResource>;
+export type ServiceTimeSingle = Response<ServiceTimeResource>;
+
+// ===== Form Resource =====
+
+export interface FormAttributes extends Attributes {
+  name?: string;
+  description?: string;
+  active?: boolean;
+  archived_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FormRelationships {
+  organization?: Relationship;
+  form_category?: Relationship;
+}
+
+export interface FormResource
+  extends ResourceObject<
+    'Form',
+    FormAttributes,
+    FormRelationships
+  > { }
+
+export type FormsList = Paginated<FormResource>;
+export type FormSingle = Response<FormResource>;
+
+// ===== FormCategory Resource =====
+
+export interface FormCategoryAttributes extends Attributes {
+  name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FormCategoryRelationships {
+  organization?: Relationship;
+}
+
+export interface FormCategoryResource
+  extends ResourceObject<
+    'FormCategory',
+    FormCategoryAttributes,
+    FormCategoryRelationships
+  > { }
+
+export type FormCategoriesList = Paginated<FormCategoryResource>;
+export type FormCategorySingle = Response<FormCategoryResource>;
+
+// ===== FormField Resource =====
+
+export interface FormFieldAttributes extends Attributes {
+  name?: string;
+  field_type?: string;
+  required?: boolean;
+  sequence?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FormFieldRelationships {
+  form?: Relationship;
+}
+
+export interface FormFieldResource
+  extends ResourceObject<
+    'FormField',
+    FormFieldAttributes,
+    FormFieldRelationships
+  > { }
+
+export type FormFieldsList = Paginated<FormFieldResource>;
+export type FormFieldSingle = Response<FormFieldResource>;
+
+// ===== FormFieldOption Resource =====
+
+export interface FormFieldOptionAttributes extends Attributes {
+  value?: string;
+  sequence?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FormFieldOptionRelationships {
+  form_field?: Relationship;
+}
+
+export interface FormFieldOptionResource
+  extends ResourceObject<
+    'FormFieldOption',
+    FormFieldOptionAttributes,
+    FormFieldOptionRelationships
+  > { }
+
+export type FormFieldOptionsList = Paginated<FormFieldOptionResource>;
+export type FormFieldOptionSingle = Response<FormFieldOptionResource>;
+
+// ===== FormSubmission Resource =====
+
+export interface FormSubmissionAttributes extends Attributes {
+  submitted_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FormSubmissionRelationships {
+  form?: Relationship;
+  person?: Relationship;
+}
+
+export interface FormSubmissionResource
+  extends ResourceObject<
+    'FormSubmission',
+    FormSubmissionAttributes,
+    FormSubmissionRelationships
+  > { }
+
+export type FormSubmissionsList = Paginated<FormSubmissionResource>;
+export type FormSubmissionSingle = Response<FormSubmissionResource>;
+
+// ===== FormSubmissionValue Resource =====
+
+export interface FormSubmissionValueAttributes extends Attributes {
+  value?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FormSubmissionValueRelationships {
+  form_submission?: Relationship;
+  form_field?: Relationship;
+}
+
+export interface FormSubmissionValueResource
+  extends ResourceObject<
+    'FormSubmissionValue',
+    FormSubmissionValueAttributes,
+    FormSubmissionValueRelationships
+  > { }
+
+export type FormSubmissionValuesList = Paginated<FormSubmissionValueResource>;
+export type FormSubmissionValueSingle = Response<FormSubmissionValueResource>;
+
+// ===== Report Resource =====
+
+export interface ReportAttributes extends Attributes {
+  name?: string;
+  body?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ReportRelationships {
+  organization?: Relationship;
+  created_by?: Relationship;
+  updated_by?: Relationship;
+}
+
+export interface ReportResource
+  extends ResourceObject<
+    'Report',
+    ReportAttributes,
+    ReportRelationships
+  > { }
+
+export type ReportsList = Paginated<ReportResource>;
+export type ReportSingle = Response<ReportResource>;
+
 // ===== Included union for People =====
 
 export type PeopleIncluded =
@@ -660,4 +852,12 @@ export type PeopleIncluded =
   | SocialProfileResource
   | FieldDatumResource
   | TabResource
-  | CampusResource;
+  | CampusResource
+  | ServiceTimeResource
+  | FormResource
+  | FormCategoryResource
+  | FormFieldResource
+  | FormFieldOptionResource
+  | FormSubmissionResource
+  | FormSubmissionValueResource
+  | ReportResource;

@@ -1,6 +1,6 @@
-# Best Practices Guide - v2.0.0
+# Best Practices Guide - v2.3.0
 
-This guide covers best practices for production usage, security, performance, and maintainability when using the Planning Center People TypeScript library v2.0.0.
+This guide covers best practices for production usage, security, performance, and maintainability when using the Planning Center People TypeScript library v2.3.0.
 
 ## Table of Contents
 

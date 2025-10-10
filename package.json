@@ -1,6 +1,6 @@
 {
     "name": "@rachelallyson/planning-center-people-ts",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "description": "A strictly typed TypeScript client for Planning Center Online People API with smart matching, batch operations, and enhanced developer experience",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

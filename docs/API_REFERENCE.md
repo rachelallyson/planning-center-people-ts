@@ -1,6 +1,6 @@
-# API Reference - v2.0.0
+# API Reference - v2.3.0
 
-Complete reference for the Planning Center People TypeScript library v2.0.0 - Class-based API with modular architecture.
+Complete reference for the Planning Center People TypeScript library v2.3.0 - Class-based API with modular architecture.
 
 ## Table of Contents
 
@@ -1454,6 +1454,416 @@ interface CampusAttributes {
 
 interface CampusRelationships {
   organization?: Relationship;
+}
+```
+
+## ServiceTime Module
+
+Access via `client.serviceTime`
+
+### ServiceTime Operations
+
+#### `getAll(campusId: string, params?: GetServiceTimesParams): Promise<Paginated<ServiceTimeResource>>`
+
+Get all service times for a specific campus.
+
+**Parameters:**
+
+- `campusId` - The campus ID to get service times for
+- `params.where` - Filter criteria
+- `params.include` - Related resources to include
+- `params.per_page` - Number of results per page
+- `params.page` - Page number
+
+**Example:**
+
+```typescript
+const serviceTimes = await client.serviceTime.getAll('campus-id', {
+  per_page: 50,
+  include: ['campus', 'organization']
+});
+```
+
+#### `getById(campusId: string, id: string, include?: string[]): Promise<ServiceTimeResource>`
+
+Get a specific service time by ID for a campus.
+
+**Example:**
+
+```typescript
+const serviceTime = await client.serviceTime.getById('campus-id', 'service-time-id', ['campus']);
+```
+
+#### `create(campusId: string, data: ServiceTimeAttributes): Promise<ServiceTimeResource>`
+
+Create a new service time for a campus.
+
+**Example:**
+
+```typescript
+const serviceTime = await client.serviceTime.create('campus-id', {
+  start_time: '09:00:00',
+  day: 0, // Sunday
+  description: 'Main Service'
+});
+```
+
+#### `update(campusId: string, id: string, data: Partial<ServiceTimeAttributes>): Promise<ServiceTimeResource>`
+
+Update an existing service time for a campus.
+
+**Example:**
+
+```typescript
+const updatedServiceTime = await client.serviceTime.update('campus-id', 'service-time-id', {
+  start_time: '10:30:00',
+  description: 'Updated Service Time'
+});
+```
+
+#### `delete(campusId: string, id: string): Promise<void>`
+
+Delete a service time for a campus.
+
+**Example:**
+
+```typescript
+await client.serviceTime.delete('campus-id', 'service-time-id');
+```
+
+#### `getAllPagesPaginated(campusId: string, params?: GetServiceTimesParams): Promise<ServiceTimeResource[]>`
+
+Get all service times for a campus with automatic pagination.
+
+**Example:**
+
+```typescript
+const allServiceTimes = await client.serviceTime.getAllPagesPaginated('campus-id');
+```
+
+### ServiceTime Resource Types
+
+```typescript
+interface ServiceTimeResource {
+  id: string;
+  type: 'ServiceTime';
+  attributes: ServiceTimeAttributes;
+  relationships?: ServiceTimeRelationships;
+}
+
+interface ServiceTimeAttributes {
+  start_time?: string;
+  day?: number;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ServiceTimeRelationships {
+  organization?: Relationship;
+  campus?: Relationship;
+}
+```
+
+## Forms Module
+
+Access via `client.forms`
+
+### Forms Operations
+
+#### `getAll(params?: GetFormsParams): Promise<Paginated<FormResource>>`
+
+Get all forms.
+
+**Parameters:**
+
+- `params.where` - Filter criteria
+- `params.include` - Related resources to include
+- `params.per_page` - Number of results per page
+- `params.page` - Page number
+
+**Example:**
+
+```typescript
+const forms = await client.forms.getAll({
+  per_page: 50,
+  include: ['form_category']
+});
+```
+
+#### `getById(id: string, include?: string[]): Promise<FormResource>`
+
+Get a specific form by ID.
+
+**Example:**
+
+```typescript
+const form = await client.forms.getById('form-id', ['form_category']);
+```
+
+#### `getFormCategory(formId: string): Promise<FormCategoryResource>`
+
+Get the form category for a specific form.
+
+**Example:**
+
+```typescript
+const formCategory = await client.forms.getFormCategory('form-id');
+```
+
+#### `getFormFields(formId: string, params?: GetFormFieldsParams): Promise<{ data: FormFieldResource[] }>`
+
+Get form fields for a specific form.
+
+**Example:**
+
+```typescript
+const formFields = await client.forms.getFormFields('form-id');
+```
+
+#### `getFormFieldOptions(formFieldId: string, params?: GetFormFieldOptionsParams): Promise<{ data: FormFieldOptionResource[] }>`
+
+Get form field options for a specific form field.
+
+**Example:**
+
+```typescript
+const formFieldOptions = await client.forms.getFormFieldOptions('form-field-id');
+```
+
+#### `getFormSubmissions(formId: string, params?: GetFormSubmissionsParams): Promise<{ data: FormSubmissionResource[] }>`
+
+Get form submissions for a specific form.
+
+**Example:**
+
+```typescript
+const formSubmissions = await client.forms.getFormSubmissions('form-id');
+```
+
+#### `getFormSubmissionById(formSubmissionId: string, include?: string[]): Promise<FormSubmissionResource>`
+
+Get a specific form submission by ID.
+
+**Example:**
+
+```typescript
+const formSubmission = await client.forms.getFormSubmissionById('submission-id', ['form', 'person']);
+```
+
+#### `getFormSubmissionValues(formSubmissionId: string, params?: GetFormSubmissionValuesParams): Promise<{ data: FormSubmissionValueResource[] }>`
+
+Get form submission values for a specific form submission.
+
+**Example:**
+
+```typescript
+const submissionValues = await client.forms.getFormSubmissionValues('submission-id');
+```
+
+### Forms Resource Types
+
+```typescript
+interface FormResource {
+  id: string;
+  type: 'Form';
+  attributes: FormAttributes;
+  relationships?: FormRelationships;
+}
+
+interface FormAttributes {
+  name?: string;
+  description?: string;
+  active?: boolean;
+  archived_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface FormRelationships {
+  organization?: Relationship;
+  form_category?: Relationship;
+}
+
+interface FormCategoryResource {
+  id: string;
+  type: 'FormCategory';
+  attributes: FormCategoryAttributes;
+  relationships?: FormCategoryRelationships;
+}
+
+interface FormCategoryAttributes {
+  name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface FormFieldResource {
+  id: string;
+  type: 'FormField';
+  attributes: FormFieldAttributes;
+  relationships?: FormFieldRelationships;
+}
+
+interface FormFieldAttributes {
+  name?: string;
+  field_type?: string;
+  required?: boolean;
+  sequence?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface FormSubmissionResource {
+  id: string;
+  type: 'FormSubmission';
+  attributes: FormSubmissionAttributes;
+  relationships?: FormSubmissionRelationships;
+}
+
+interface FormSubmissionAttributes {
+  submitted_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface FormSubmissionValueResource {
+  id: string;
+  type: 'FormSubmissionValue';
+  attributes: FormSubmissionValueAttributes;
+  relationships?: FormSubmissionValueRelationships;
+}
+
+interface FormSubmissionValueAttributes {
+  value?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+```
+
+## Reports Module
+
+Access via `client.reports`
+
+### Reports Operations
+
+#### `getAll(params?: GetReportsParams): Promise<Paginated<ReportResource>>`
+
+Get all reports.
+
+**Parameters:**
+
+- `params.where` - Filter criteria
+- `params.include` - Related resources to include
+- `params.per_page` - Number of results per page
+- `params.page` - Page number
+
+**Example:**
+
+```typescript
+const reports = await client.reports.getAll({
+  per_page: 50,
+  include: ['created_by', 'updated_by']
+});
+```
+
+#### `getById(id: string, include?: string[]): Promise<ReportResource>`
+
+Get a specific report by ID.
+
+**Example:**
+
+```typescript
+const report = await client.reports.getById('report-id', ['created_by', 'updated_by']);
+```
+
+#### `create(data: ReportAttributes): Promise<ReportResource>`
+
+Create a new report.
+
+**Example:**
+
+```typescript
+const report = await client.reports.create({
+  name: 'Monthly Attendance Report',
+  body: 'Report showing monthly attendance statistics'
+});
+```
+
+#### `update(id: string, data: Partial<ReportAttributes>): Promise<ReportResource>`
+
+Update an existing report.
+
+**Example:**
+
+```typescript
+const updatedReport = await client.reports.update('report-id', {
+  name: 'Updated Report Name',
+  body: 'Updated report content'
+});
+```
+
+#### `delete(id: string): Promise<void>`
+
+Delete a report.
+
+**Example:**
+
+```typescript
+await client.reports.delete('report-id');
+```
+
+#### `getCreatedBy(reportId: string): Promise<PersonResource>`
+
+Get the person who created a report.
+
+**Example:**
+
+```typescript
+const creator = await client.reports.getCreatedBy('report-id');
+```
+
+#### `getUpdatedBy(reportId: string): Promise<PersonResource>`
+
+Get the person who last updated a report.
+
+**Example:**
+
+```typescript
+const updater = await client.reports.getUpdatedBy('report-id');
+```
+
+#### `getAllPagesPaginated(params?: GetReportsParams): Promise<ReportResource[]>`
+
+Get all reports with automatic pagination.
+
+**Example:**
+
+```typescript
+const allReports = await client.reports.getAllPagesPaginated();
+```
+
+### Reports Resource Types
+
+```typescript
+interface ReportResource {
+  id: string;
+  type: 'Report';
+  attributes: ReportAttributes;
+  relationships?: ReportRelationships;
+}
+
+interface ReportAttributes {
+  name?: string;
+  body?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ReportRelationships {
+  organization?: Relationship;
+  created_by?: Relationship;
+  updated_by?: Relationship;
 }
 ```
 
