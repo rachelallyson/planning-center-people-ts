@@ -31,7 +31,7 @@ describe('v2.0.0 Fields API Integration Tests', () => {
 
         // Add fields-specific event handlers
         client.on('error', (event) => {
-            console.error('Fields Error:', event.error.message);
+            console.error('Fields Error:', (event as any).error.message);
         });
     }, 30000);
 
@@ -115,7 +115,7 @@ describe('v2.0.0 Fields API Integration Tests', () => {
             // Create a test person for field operations
             if (!testPersonId) {
                 const timestamp = Date.now();
-                const personData: Partial<PersonAttributes> = {
+                const personData = {
                     first_name: `${TEST_PREFIX}_FieldTest_${timestamp}`,
                     last_name: `${TEST_PREFIX}_Test_${timestamp}`,
                     status: 'active',
@@ -125,7 +125,7 @@ describe('v2.0.0 Fields API Integration Tests', () => {
                 testPersonId = createResponse.id || '';
                 expect(testPersonId).toBeTruthy();
             }
-        });
+        }, 90000);
 
         it('should set person field by field ID', async () => {
             const allFieldDefs = await client.fields.getAllFieldDefinitions();
@@ -305,7 +305,25 @@ describe('v2.0.0 Fields API Integration Tests', () => {
     });
 
     describe('Field Type Validation', () => {
+        beforeEach(async () => {
+            // Create a test person for field operations
+            if (!testPersonId) {
+                const timestamp = Date.now();
+                const personData = {
+                    first_name: `${TEST_PREFIX}_FieldTest_${timestamp}`,
+                    last_name: `${TEST_PREFIX}_Test_${timestamp}`,
+                    status: 'active',
+                };
+
+                const createResponse = await client.people.create(personData);
+                testPersonId = createResponse.id || '';
+                expect(testPersonId).toBeTruthy();
+            }
+        }, 90000);
+
         it('should validate different field types', async () => {
+            expect(testPersonId).toBeTruthy();
+
             const allFieldDefs = await client.fields.getAllFieldDefinitions();
             expect(allFieldDefs.length).toBeGreaterThan(0);
 
@@ -326,7 +344,7 @@ describe('v2.0.0 Fields API Integration Tests', () => {
                     textField.id,
                     'Test text value'
                 );
-                expect(result.value).toBe('Test text value');
+                expect(result.attributes?.value).toBe('Test text value');
             }
 
             if (numberField) {
@@ -335,7 +353,7 @@ describe('v2.0.0 Fields API Integration Tests', () => {
                     numberField.id,
                     '123'
                 );
-                expect(result.value).toBe('123');
+                expect(result.attributes?.value).toBe('123');
             }
 
             if (dateField) {
@@ -346,6 +364,148 @@ describe('v2.0.0 Fields API Integration Tests', () => {
                 );
                 // Date fields may be returned in different formats by the API
                 expect(result.attributes?.value).toMatch(/2025-01-01|01\/01\/2025/);
+            }
+        }, 60000);
+    });
+
+    describe('File Upload Functionality', () => {
+        it('should upload files to file fields', async () => {
+            // Create a test person first
+            const timestamp = Date.now();
+            const personData = {
+                first_name: `${TEST_PREFIX}_FileUpload_${timestamp}`,
+                last_name: `${TEST_PREFIX}_Test_${timestamp}`,
+                status: 'active',
+            };
+
+            const createResponse = await client.people.create(personData);
+            const testPersonId = createResponse.id || '';
+            expect(testPersonId).toBeTruthy();
+
+            try {
+                // Get field definitions to find a file field
+                const fieldDefs = await client.fields.getAllFieldDefinitions();
+                const fileField = fieldDefs.find(field => field.attributes?.data_type === 'file');
+
+                if (fileField) {
+                    // Test with a simple text file that should work
+                    const testFileUrl = 'https://www.w3.org/TR/2003/REC-PNG-20031110/iso_8859-1.txt';
+
+                    const result = await client.fields.createPersonFieldData(
+                        testPersonId,
+                        fileField.id,
+                        testFileUrl
+                    );
+
+                    // Verify the response structure
+                    expect(result).toBeDefined();
+                    expect(result.type).toBe('FieldDatum');
+                    expect(result.id).toBeTruthy();
+
+                    // For file fields, the file data is in the 'file' attribute, not 'value'
+                    expect(result.attributes?.file).toBeTruthy();
+                    expect(result.attributes?.file?.url).toBeTruthy();
+                    expect(result.attributes?.file_name).toBe('iso_8859-1.txt');
+                    expect(result.attributes?.file_content_type).toBe('text/plain');
+                    expect(result.attributes?.file_size).toBeGreaterThan(0);
+
+                    // Clean up the field data
+                    await client.fields.deletePersonFieldData(testPersonId, result.id);
+                } else {
+                    console.log('No file field found for testing - skipping file upload test');
+                }
+            } finally {
+                // Clean up test person
+                await client.people.delete(testPersonId);
+            }
+        }, 60000);
+
+        it('should handle HTML markup with file URLs', async () => {
+            // Create a test person first
+            const timestamp = Date.now();
+            const personData = {
+                first_name: `${TEST_PREFIX}_HTMLFile_${timestamp}`,
+                last_name: `${TEST_PREFIX}_Test_${timestamp}`,
+                status: 'active',
+            };
+
+            const createResponse = await client.people.create(personData);
+            const testPersonId = createResponse.id || '';
+            expect(testPersonId).toBeTruthy();
+
+            try {
+                // Get field definitions to find a file field
+                const fieldDefs = await client.fields.getAllFieldDefinitions();
+                const fileField = fieldDefs.find(field => field.attributes?.data_type === 'file');
+
+                if (fileField) {
+                    // Test with HTML markup containing file URL
+                    const htmlFileValue = '<a href="https://www.w3.org/TR/2003/REC-PNG-20031110/iso_8859-1.txt" download>View File</a>';
+
+                    const result = await client.fields.createPersonFieldData(
+                        testPersonId,
+                        fileField.id,
+                        htmlFileValue
+                    );
+
+                    // Verify the response structure
+                    expect(result).toBeDefined();
+                    expect(result.type).toBe('FieldDatum');
+                    expect(result.id).toBeTruthy();
+
+                    // For file fields, the file data is in the 'file' attribute, not 'value'
+                    expect(result.attributes?.file).toBeTruthy();
+                    expect(result.attributes?.file?.url).toBeTruthy();
+                    expect(result.attributes?.file_name).toBeTruthy();
+                    expect(result.attributes?.file_content_type).toBeTruthy();
+                    expect(result.attributes?.file_size).toBeGreaterThan(0);
+
+                    // Clean up the field data
+                    await client.fields.deletePersonFieldData(testPersonId, result.id);
+                } else {
+                    console.log('No file field found for testing - skipping HTML file upload test');
+                }
+            } finally {
+                // Clean up test person
+                await client.people.delete(testPersonId);
+            }
+        }, 120000);
+
+        it('should handle file upload errors gracefully', async () => {
+            // Create a test person first
+            const timestamp = Date.now();
+            const personData = {
+                first_name: `${TEST_PREFIX}_ErrorTest_${timestamp}`,
+                last_name: `${TEST_PREFIX}_Test_${timestamp}`,
+                status: 'active',
+            };
+
+            const createResponse = await client.people.create(personData);
+            const testPersonId = createResponse.id || '';
+            expect(testPersonId).toBeTruthy();
+
+            try {
+                // Get field definitions to find a file field
+                const fieldDefs = await client.fields.getAllFieldDefinitions();
+                const fileField = fieldDefs.find(field => field.attributes?.data_type === 'file');
+
+                if (fileField) {
+                    // Test with an invalid file URL
+                    const invalidFileUrl = 'https://invalid-domain-that-does-not-exist.com/file.txt';
+
+                    await expect(
+                        client.fields.createPersonFieldData(
+                            testPersonId,
+                            fileField.id,
+                            invalidFileUrl
+                        )
+                    ).rejects.toThrow();
+                } else {
+                    console.log('No file field found for testing - skipping error handling test');
+                }
+            } finally {
+                // Clean up test person
+                await client.people.delete(testPersonId);
             }
         }, 60000);
     });

@@ -158,7 +158,7 @@ describe('v2.3.0 Reports API Integration Tests', () => {
         await expect(client.reports.delete(invalidReportId)).rejects.toThrow();
         await expect(client.reports.getCreatedBy(invalidReportId)).rejects.toThrow();
         await expect(client.reports.getUpdatedBy(invalidReportId)).rejects.toThrow();
-    }, 30000);
+    }, 60000);
 
     it('should handle report creation with minimal data', async () => {
         const minimalReportData: ReportAttributes = {

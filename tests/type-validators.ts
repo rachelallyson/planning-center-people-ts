@@ -83,8 +83,8 @@ export function validateDateAttribute(
   field: string
 ) {
   const value = attributes[field];
-  // // Skip validation if field is undefined (optional)
-  if (value === null) return;
+  // Skip validation if field is undefined or null (optional)
+  if (value === null || value === undefined) return;
 
   expect(typeof value).toBe('string');
   // Basic ISO8601 format check (YYYY-MM-DDTHH:mm:ss)

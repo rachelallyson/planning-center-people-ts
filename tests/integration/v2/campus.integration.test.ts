@@ -44,7 +44,7 @@ describe('v2.0.0 Campus API Integration Tests', () => {
 
             expect(campuses).toBeDefined();
             expect(Array.isArray(campuses)).toBe(true);
-            
+
             // Verify all items are Campus resources
             campuses.forEach(campus => {
                 expect(campus.type).toBe('Campus');
@@ -55,6 +55,7 @@ describe('v2.0.0 Campus API Integration Tests', () => {
         it('should create a campus', async () => {
             const timestamp = Date.now();
             const campusData: CampusAttributes = {
+                name: `${TEST_PREFIX}_Test_Campus_${timestamp}`,
                 description: `${TEST_PREFIX}_Test_Campus_${timestamp}`,
                 street: '123 Test Street',
                 city: 'Test City',

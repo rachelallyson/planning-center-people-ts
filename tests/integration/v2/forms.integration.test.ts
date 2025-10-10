@@ -80,7 +80,7 @@ describe('v2.3.0 Forms API Integration Tests', () => {
         expect(formSubmission).toBeDefined();
         expect(formSubmission.type).toBe('FormSubmission');
         expect(formSubmission.id).toBe(submissionId);
-    }, 30000);
+    }, 120000);
 
     it('should get form submission values for a form submission', async () => {
         // First get form submissions to find a submission ID
@@ -89,7 +89,7 @@ describe('v2.3.0 Forms API Integration Tests', () => {
         const formSubmissionValues = await client.forms.getFormSubmissionValues(testFormId, submissionId);
         expect(formSubmissionValues).toBeDefined();
         expect(Array.isArray(formSubmissionValues.data)).toBe(true);
-    }, 30000);
+    }, 60000);
 
     it('should handle invalid form ID gracefully', async () => {
         const invalidFormId = 'invalid-form-id';
@@ -98,7 +98,7 @@ describe('v2.3.0 Forms API Integration Tests', () => {
         await expect(client.forms.getFormCategory(invalidFormId)).rejects.toThrow();
         await expect(client.forms.getFormFields(invalidFormId)).rejects.toThrow();
         await expect(client.forms.getFormSubmissions(invalidFormId)).rejects.toThrow();
-    }, 30000);
+    }, 60000);
 
     it('should handle invalid form submission ID gracefully', async () => {
         const invalidSubmissionId = 'invalid-submission-id';

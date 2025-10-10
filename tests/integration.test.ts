@@ -95,22 +95,22 @@ describe('PCO API Integration Tests', () => {
     // Create client with rate limiting
     const config = hasOAuthCredentials
       ? {
-          accessToken: process.env.PCO_ACCESS_TOKEN!,
-          rateLimit: {
-            maxRequests: RATE_LIMIT_MAX,
-            perMilliseconds: RATE_LIMIT_WINDOW,
-          },
-          timeout: 30000,
-        }
+        accessToken: process.env.PCO_ACCESS_TOKEN!,
+        rateLimit: {
+          maxRequests: RATE_LIMIT_MAX,
+          perMilliseconds: RATE_LIMIT_WINDOW,
+        },
+        timeout: 30000,
+      }
       : {
-          appId: process.env.PCO_APP_ID!,
-          appSecret: process.env.PCO_APP_SECRET!,
-          rateLimit: {
-            maxRequests: RATE_LIMIT_MAX,
-            perMilliseconds: RATE_LIMIT_WINDOW,
-          },
-          timeout: 30000,
-        };
+        appId: process.env.PCO_APP_ID!,
+        appSecret: process.env.PCO_APP_SECRET!,
+        rateLimit: {
+          maxRequests: RATE_LIMIT_MAX,
+          perMilliseconds: RATE_LIMIT_WINDOW,
+        },
+        timeout: 30000,
+      };
 
     client = createPcoClient(config);
   }, 30000);
@@ -193,10 +193,10 @@ describe('PCO API Integration Tests', () => {
 
       if (response.data.length > 0) {
         const person = response.data[0];
-        
+
         // Validate PersonResource structure
         validateResourceStructure(person, 'Person');
-        
+
         // Validate PersonAttributes
         if (person.attributes) {
           validateNullableStringAttribute(person.attributes, 'first_name');
@@ -217,7 +217,7 @@ describe('PCO API Integration Tests', () => {
           validateNullableStringAttribute(person.attributes, 'people_permissions');
           validateNullableStringAttribute(person.attributes, 'remote_id');
         }
-        
+
         // Validate PersonRelationships
         if (person.relationships) {
           Object.entries(person.relationships).forEach(([key, rel]) => {
@@ -225,7 +225,7 @@ describe('PCO API Integration Tests', () => {
           });
         }
       }
-      
+
       // Validate included resources if present
       if (response.included) {
         validateIncludedResources(response.included, ['Email', 'PhoneNumber']);
@@ -271,28 +271,32 @@ describe('PCO API Integration Tests', () => {
 
       expect(response).toHaveProperty('data');
       expect(Array.isArray(response.data)).toBe(true);
-      
+
       // Validate pagination structure
       validatePaginationLinks(response.links);
       validatePaginationMeta(response.meta);
 
       if (response.data.length > 0) {
         const household = response.data[0];
-        
+
         // Validate HouseholdResource structure
         validateResourceStructure(household, 'Household');
-        
+
         // Validate HouseholdAttributes
         if (household.attributes) {
           validateStringAttribute(household.attributes, 'name');
           validateDateAttribute(household.attributes, 'created_at');
           validateDateAttribute(household.attributes, 'updated_at');
         }
-        
+
         // Validate HouseholdRelationships
         if (household.relationships) {
-          validateRelationship(household.relationships.people, 'household.relationships.people');
-          validateRelationship(household.relationships.addresses, 'household.relationships.addresses');
+          if (household.relationships.people) {
+            validateRelationship(household.relationships.people, 'household.relationships.people');
+          }
+          if (household.relationships.addresses) {
+            validateRelationship(household.relationships.addresses, 'household.relationships.addresses');
+          }
         }
       }
     }, 30000);
@@ -304,17 +308,17 @@ describe('PCO API Integration Tests', () => {
 
       expect(response).toHaveProperty('data');
       expect(Array.isArray(response.data)).toBe(true);
-      
+
       // Validate pagination structure
       validatePaginationLinks(response.links);
       validatePaginationMeta(response.meta);
 
       if (response.data.length > 0) {
         const fieldDef = response.data[0];
-        
+
         // Validate FieldDefinitionResource structure
         validateResourceStructure(fieldDef, 'FieldDefinition');
-        
+
         // Validate FieldDefinitionAttributes
         if (fieldDef.attributes) {
           validateStringAttribute(fieldDef.attributes, 'name');
@@ -334,10 +338,12 @@ describe('PCO API Integration Tests', () => {
           validateDateAttribute(fieldDef.attributes, 'created_at');
           validateDateAttribute(fieldDef.attributes, 'updated_at');
         }
-        
+
         // Validate FieldDefinitionRelationships
         if (fieldDef.relationships) {
-          validateRelationship(fieldDef.relationships.field_options, 'fieldDef.relationships.field_options');
+          if (fieldDef.relationships.field_options) {
+            validateRelationship(fieldDef.relationships.field_options, 'fieldDef.relationships.field_options');
+          }
         }
       }
     }, 30000);
@@ -391,12 +397,12 @@ describe('PCO API Integration Tests', () => {
       // Create email
       const createResponse = await createPersonEmail(client, testPersonId, emailData);
       expect(createResponse.data).toBeDefined();
-      
+
       // Validate EmailResource structure
       if (createResponse.data) {
         validateResourceStructure(createResponse.data, 'Email');
         expect(createResponse.data.attributes?.address).toBe(emailData.address);
-        
+
         // Validate EmailAttributes
         if (createResponse.data.attributes) {
           validateStringAttribute(createResponse.data.attributes, 'address');
@@ -406,7 +412,7 @@ describe('PCO API Integration Tests', () => {
           validateDateAttribute(createResponse.data.attributes, 'created_at');
           validateDateAttribute(createResponse.data.attributes, 'updated_at');
         }
-        
+
         // Validate EmailRelationships
         if (createResponse.data.relationships) {
           validateRelationship(createResponse.data.relationships.person, 'email.relationships.person');
@@ -424,7 +430,7 @@ describe('PCO API Integration Tests', () => {
         (email) => email.attributes?.address === emailData.address
       );
       expect(createdEmail).toBeDefined();
-      
+
       // Validate Email list response
       if (createdEmail) {
         validateResourceStructure(createdEmail, 'Email');
@@ -447,12 +453,12 @@ describe('PCO API Integration Tests', () => {
       // Create phone number
       const createResponse = await createPersonPhoneNumber(client, testPersonId, phoneData);
       expect(createResponse.data).toBeDefined();
-      
+
       // Validate PhoneNumberResource structure
       if (createResponse.data) {
         validateResourceStructure(createResponse.data, 'PhoneNumber');
         expect(createResponse.data.attributes?.number).toBe(phoneData.number);
-        
+
         // Validate PhoneNumberAttributes
         if (createResponse.data.attributes) {
           validateStringAttribute(createResponse.data.attributes, 'number');
@@ -461,7 +467,7 @@ describe('PCO API Integration Tests', () => {
           validateDateAttribute(createResponse.data.attributes, 'created_at');
           validateDateAttribute(createResponse.data.attributes, 'updated_at');
         }
-        
+
         // Validate PhoneNumberRelationships
         if (createResponse.data.relationships) {
           validateRelationship(createResponse.data.relationships.person, 'phone.relationships.person');
@@ -479,7 +485,7 @@ describe('PCO API Integration Tests', () => {
         (phone) => phone.attributes?.number === phoneData.number
       );
       expect(createdPhone).toBeDefined();
-      
+
       // Validate PhoneNumber list response
       if (createdPhone) {
         validateResourceStructure(createdPhone, 'PhoneNumber');
@@ -497,12 +503,12 @@ describe('PCO API Integration Tests', () => {
       // Check if we have addresses in included resources
       if (response.included) {
         const addresses = response.included.filter(r => r.type === 'Address');
-        
+
         if (addresses.length > 0) {
           addresses.forEach(address => {
             // Validate AddressResource structure
             validateResourceStructure(address, 'Address');
-            
+
             // Validate AddressAttributes
             if (address.attributes) {
               validateNullableStringAttribute(address.attributes, 'address1');
@@ -515,7 +521,7 @@ describe('PCO API Integration Tests', () => {
               validateDateAttribute(address.attributes, 'created_at');
               validateDateAttribute(address.attributes, 'updated_at');
             }
-            
+
             // Validate AddressRelationships
             if (address.relationships && 'person' in address.relationships) {
               validateRelationship(address.relationships.person, 'address.relationships.person');
@@ -538,12 +544,12 @@ describe('PCO API Integration Tests', () => {
       // Check if we have social profiles in included resources
       if (response.included) {
         const socialProfiles = response.included.filter(r => r.type === 'SocialProfile');
-        
+
         if (socialProfiles.length > 0) {
           socialProfiles.forEach(profile => {
             // Validate SocialProfileResource structure
             validateResourceStructure(profile, 'SocialProfile');
-            
+
             // Validate SocialProfileAttributes
             if (profile.attributes) {
               validateStringAttribute(profile.attributes, 'service');
@@ -553,7 +559,7 @@ describe('PCO API Integration Tests', () => {
               validateDateAttribute(profile.attributes, 'created_at');
               validateDateAttribute(profile.attributes, 'updated_at');
             }
-            
+
             // Validate SocialProfileRelationships
             if (profile.relationships && 'person' in profile.relationships) {
               validateRelationship(profile.relationships.person, 'socialProfile.relationships.person');
@@ -574,25 +580,25 @@ describe('PCO API Integration Tests', () => {
         console.log('No people found - skipping workflow validation');
         return;
       }
-      
+
       const personId = peopleResponse.data[0].id;
-      
+
       // Get workflow cards for this person
       const cardsResponse = await getWorkflowCards(client, personId);
-      
+
       expect(cardsResponse).toHaveProperty('data');
       expect(Array.isArray(cardsResponse.data)).toBe(true);
-      
+
       // Validate pagination
       validatePaginationLinks(cardsResponse.links);
       validatePaginationMeta(cardsResponse.meta);
-      
+
       if (cardsResponse.data.length > 0) {
         const card = cardsResponse.data[0];
-        
+
         // Validate WorkflowCardResource structure
         validateResourceStructure(card, 'WorkflowCard');
-        
+
         // Validate WorkflowCardAttributes
         if (card.attributes) {
           validateNullableStringAttribute(card.attributes, 'snooze_until');
@@ -602,33 +608,35 @@ describe('PCO API Integration Tests', () => {
           validateDateAttribute(card.attributes, 'created_at');
           validateDateAttribute(card.attributes, 'updated_at');
         }
-        
+
         // Validate WorkflowCardRelationships
         if (card.relationships) {
           validateRelationship(card.relationships.person, 'workflowCard.relationships.person');
           validateRelationship(card.relationships.workflow, 'workflowCard.relationships.workflow');
         }
-        
+
         // Get notes for this card
         const cardId = card.id;
         const notesResponse = await getWorkflowCardNotes(client, personId, cardId);
-        
+
         if (notesResponse.data.length > 0) {
           const note = notesResponse.data[0];
-          
+
           // Validate WorkflowCardNoteResource structure
           validateResourceStructure(note, 'WorkflowCardNote');
-          
+
           // Validate WorkflowCardNoteAttributes
           if (note.attributes) {
             validateStringAttribute(note.attributes, 'note');
             validateDateAttribute(note.attributes, 'created_at');
             validateDateAttribute(note.attributes, 'updated_at');
           }
-          
+
           // Validate WorkflowCardNoteRelationships
           if (note.relationships) {
-            validateRelationship(note.relationships.workflow_card, 'workflowCardNote.relationships.workflow_card');
+            if (note.relationships.workflow_card) {
+              validateRelationship(note.relationships.workflow_card, 'workflowCardNote.relationships.workflow_card');
+            }
           }
         } else {
           console.log('No workflow card notes found to validate');
@@ -644,16 +652,16 @@ describe('PCO API Integration Tests', () => {
         include: ['field_options'],
         per_page: 10,
       });
-      
+
       // Check if we have field options in included resources
       if (fieldDefsResponse.included) {
         const fieldOptions = fieldDefsResponse.included.filter(r => r.type === 'FieldOption');
-        
+
         if (fieldOptions.length > 0) {
           fieldOptions.forEach(option => {
             // Validate FieldOptionResource structure
             validateResourceStructure(option, 'FieldOption');
-            
+
             // Validate FieldOptionAttributes
             if (option.attributes) {
               validateStringAttribute(option.attributes, 'value');
@@ -661,7 +669,7 @@ describe('PCO API Integration Tests', () => {
               validateDateAttribute(option.attributes, 'created_at');
               validateDateAttribute(option.attributes, 'updated_at');
             }
-            
+
             // Validate FieldOptionRelationships
             if (option.relationships) {
               validateRelationship(option.relationships.field_definition, 'fieldOption.relationships.field_definition');
@@ -671,21 +679,21 @@ describe('PCO API Integration Tests', () => {
           console.log('No field options found to validate');
         }
       }
-      
+
       // Try to get field data for a person
       const peopleResponse = await getPeople(client, {
         include: ['field_data'],
         per_page: 5,
       });
-      
+
       if (peopleResponse.included) {
         const fieldData = peopleResponse.included.filter(r => r.type === 'FieldDatum');
-        
+
         if (fieldData.length > 0) {
           fieldData.forEach(datum => {
             // Validate FieldDatumResource structure
             validateResourceStructure(datum, 'FieldDatum');
-            
+
             // Validate FieldDatumAttributes
             if (datum.attributes) {
               validateNullableStringAttribute(datum.attributes, 'value');
@@ -701,7 +709,7 @@ describe('PCO API Integration Tests', () => {
               validateDateAttribute(datum.attributes, 'created_at');
               validateDateAttribute(datum.attributes, 'updated_at');
             }
-            
+
             // Validate FieldDatumRelationships
             if (datum.relationships && 'field_definition' in datum.relationships) {
               validateRelationship(datum.relationships.field_definition, 'fieldDatum.relationships.field_definition');
@@ -721,16 +729,16 @@ describe('PCO API Integration Tests', () => {
     // Note: Some PCO People API resources may not be available via standard API endpoints
     // or may require special permissions. These tests attempt to validate types but skip
     // gracefully if resources are not accessible.
-    
+
     it('should validate list types', async () => {
       try {
         const listsResponse = await getLists(client, { per_page: 5 });
         console.log('Lists endpoint available - validating types');
-        
+
         if (listsResponse.data.length > 0) {
           const list = listsResponse.data[0];
           validateResourceStructure(list, 'List');
-          
+
           if (list.attributes) {
             validateStringAttribute(list.attributes, 'name');
             validateStringAttribute(list.attributes, 'description');
@@ -745,11 +753,11 @@ describe('PCO API Integration Tests', () => {
       try {
         const notesResponse = await getNotes(client, { per_page: 5 });
         console.log('Notes endpoint available - validating types');
-        
+
         if (notesResponse.data.length > 0) {
           const note = notesResponse.data[0];
           validateResourceStructure(note, 'Note');
-          
+
           if (note.attributes) {
             validateStringAttribute(note.attributes, 'content');
           }
@@ -763,11 +771,11 @@ describe('PCO API Integration Tests', () => {
       try {
         const workflowsResponse = await getWorkflows(client, { per_page: 5 });
         console.log('Workflows endpoint available - validating types');
-        
+
         if (workflowsResponse.data.length > 0) {
           const workflow = workflowsResponse.data[0];
           validateResourceStructure(workflow, 'Workflow');
-          
+
           if (workflow.attributes) {
             validateStringAttribute(workflow.attributes, 'name');
           }
@@ -781,11 +789,11 @@ describe('PCO API Integration Tests', () => {
       try {
         const organizationResponse = await getOrganization(client);
         console.log('Organization endpoint available - validating types');
-        
+
         if (organizationResponse.data) {
           const organization = organizationResponse.data;
           validateResourceStructure(organization, 'Organization');
-          
+
           if (organization.attributes) {
             validateStringAttribute(organization.attributes, 'name');
           }

@@ -208,7 +208,7 @@ describe('v2.0.0 Households API Integration Tests', () => {
             const householdFetchTime = Date.now() - startTime;
 
             expect(households.data.length).toBeGreaterThan(0);
-            expect(householdFetchTime).toBeLessThan(5000); // Should be fast
+            expect(householdFetchTime).toBeLessThan(30000); // Allow more time for API response
 
             console.log(`Household fetch time: ${householdFetchTime}ms`);
         }, 30000);

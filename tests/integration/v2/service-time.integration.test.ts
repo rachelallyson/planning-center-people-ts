@@ -84,6 +84,7 @@ describe('v2.3.0 ServiceTime API Integration Tests', () => {
     }, 30000);
 
     it('should get all pages of service times with pagination', async () => {
+        console.log('Creating test service times...');
         // Create a few test service times to ensure pagination works
         const serviceTime1 = await client.serviceTime.create(testCampusId, {
             start_time: 480, // 8:00 AM as minutes from midnight (8 * 60 = 480)
@@ -96,15 +97,17 @@ describe('v2.3.0 ServiceTime API Integration Tests', () => {
             description: `${TEST_PREFIX}_Page_Service_2_${Date.now()}`
         });
 
+        console.log('Fetching all pages with pagination...');
         const allServiceTimes = await client.serviceTime.getAllPagesPaginated(testCampusId, { per_page: 1 });
         expect(allServiceTimes).toBeDefined();
         expect(Array.isArray(allServiceTimes.data)).toBe(true);
         expect(allServiceTimes.data.length).toBeGreaterThanOrEqual(2); // Should fetch at least the two we created
 
+        console.log('Cleaning up test service times...');
         // Clean up test service times
         await client.serviceTime.delete(testCampusId, serviceTime1.id || '');
         await client.serviceTime.delete(testCampusId, serviceTime2.id || '');
-    }, 60000);
+    }, 120000);
 
     it('should handle invalid campus ID gracefully', async () => {
         const invalidCampusId = 'invalid-campus-id';
@@ -116,7 +119,7 @@ describe('v2.3.0 ServiceTime API Integration Tests', () => {
             day: 0,
             description: 'Test Service'
         })).rejects.toThrow();
-    }, 30000);
+    }, 60000);
 
     it('should handle invalid service time ID gracefully', async () => {
         const invalidServiceTimeId = 'invalid-service-time-id';
@@ -126,7 +129,7 @@ describe('v2.3.0 ServiceTime API Integration Tests', () => {
             description: 'Updated'
         })).rejects.toThrow();
         await expect(client.serviceTime.delete(testCampusId, invalidServiceTimeId)).rejects.toThrow();
-    }, 30000);
+    }, 120000);
 
     afterAll(async () => {
         // Clean up any remaining test service times

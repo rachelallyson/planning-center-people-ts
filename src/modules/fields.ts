@@ -320,9 +320,72 @@ export class FieldsModule extends BaseModule {
         fieldDefinitionId: string,
         fileUrl: string
     ): Promise<FieldDatumResource> {
-        // This would implement the file upload logic from the original implementation
-        // For now, return a placeholder
-        throw new Error('File upload functionality not yet implemented in v2.0');
+        try {
+            // Extract clean URL from HTML markup if needed
+            const cleanFileUrl = this.extractFileUrl(fileUrl);
+
+            // Extract filename and extension
+            const filename = this.getFilename(cleanFileUrl);
+            const extension = this.getFileExtension(cleanFileUrl);
+            const mimeType = this.getMimeType(extension);
+
+            // Download the file from the provided URL
+            const fileResponse = await fetch(cleanFileUrl, {
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'PCO-People-TS/2.0',
+                },
+            });
+
+            if (!fileResponse.ok) {
+                throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`);
+            }
+
+            const fileBuffer = await fileResponse.arrayBuffer();
+
+            // Create FormData for upload
+            const formData = new FormData();
+            const fileBlob = new Blob([fileBuffer], { type: mimeType });
+            formData.append('file', fileBlob, filename);
+
+            // Upload to PCO's upload service
+            const uploadResponse = await fetch('https://upload.planningcenteronline.com/v2/files', {
+                method: 'POST',
+                headers: {
+                    'Authorization': this.httpClient.getAuthHeader(),
+                    'User-Agent': 'PCO-People-TS/2.0',
+                },
+                body: formData,
+            });
+
+            if (!uploadResponse.ok) {
+                const errorText = await uploadResponse.text();
+                throw new Error(`File upload failed: ${uploadResponse.status} ${uploadResponse.statusText} - ${errorText}`);
+            }
+
+            const uploadData = await uploadResponse.json();
+            const fileUUID = uploadData?.data?.[0]?.id;
+
+            if (!fileUUID) {
+                throw new Error('Failed to get file UUID from upload response');
+            }
+
+            // Create field data using the file UUID
+            return this.createResource<FieldDatumResource>(`/people/${personId}/field_data`, {
+                field_definition_id: fieldDefinitionId,
+                value: fileUUID,
+            });
+
+        } catch (error) {
+            // Emit error event for monitoring
+            this.eventEmitter.emit({
+                type: 'error',
+                error: error as Error,
+                operation: 'createPersonFileFieldData',
+                timestamp: new Date().toISOString(),
+            });
+            throw error;
+        }
     }
 
     /**
@@ -398,5 +461,44 @@ export class FieldsModule extends BaseModule {
         }
 
         return value;
+    }
+
+    /**
+     * Get filename from URL
+     */
+    private getFilename(url: string): string {
+        const cleanUrl = this.extractFileUrl(url);
+        const urlParts = cleanUrl.split('/');
+        return urlParts[urlParts.length - 1] || 'file';
+    }
+
+    /**
+     * Get file extension from URL
+     */
+    private getFileExtension(url: string): string {
+        const filename = this.getFilename(url);
+        const lastDot = filename.lastIndexOf('.');
+        return lastDot > 0 ? filename.substring(lastDot + 1).toLowerCase() : '';
+    }
+
+    /**
+     * Get MIME type from file extension
+     */
+    private getMimeType(extension: string): string {
+        const mimeTypes: Record<string, string> = {
+            csv: 'text/csv',
+            doc: 'application/msword',
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            gif: 'image/gif',
+            jpeg: 'image/jpeg',
+            jpg: 'image/jpeg',
+            pdf: 'application/pdf',
+            png: 'image/png',
+            txt: 'text/plain',
+            xls: 'application/vnd.ms-excel',
+            xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+
+        return mimeTypes[extension] || 'application/octet-stream';
     }
 }

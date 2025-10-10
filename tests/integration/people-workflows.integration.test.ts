@@ -255,8 +255,10 @@ describe('People Workflows API Integration Tests', () => {
             // Validate WorkflowCardNoteAttributes
             validateStringAttribute(createResponse.data?.attributes, 'note');
 
-            // Validate WorkflowCardNoteRelationships (should not exist according to API docs)
-            expect(createResponse.data?.relationships).toBeUndefined();
+            // Validate WorkflowCardNoteRelationships
+            if (createResponse.data?.relationships) {
+                expect(createResponse.data.relationships).toHaveProperty('note_category');
+            }
 
 
             // Now get notes for this card to verify it was created

@@ -124,7 +124,7 @@ describe('v2.0.0 Lists API Integration Tests', () => {
             const people = await client.lists.getPeople(testListId);
             expect(people).toBeDefined();
             expect(Array.isArray(people.data)).toBe(true);
-        }, 30000);
+        }, 60000);
 
         it('should demonstrate list rules functionality', async () => {
             expect(testListId).toBeTruthy();

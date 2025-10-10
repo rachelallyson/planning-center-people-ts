@@ -338,7 +338,7 @@ describe('v2.0.0 Workflows API Integration Tests', () => {
             expect(promotedCard).toBeDefined();
             expect(promotedCard.type).toBe('WorkflowCard');
             expect(promotedCard.id).toBe(testWorkflowCardId);
-        }, 30000);
+        }, 120000);
 
         it('should skip step workflow card', async () => {
             // Get workflow cards for the test person

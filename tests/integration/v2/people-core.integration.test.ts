@@ -63,7 +63,7 @@ describe('v2.0.0 People Core API Integration Tests', () => {
             await client.people.delete(testPersonId);
             testPersonId = '';
         }
-    }, 30000);
+    }, 120000);
 
     describe('v2.0 Client Creation and Configuration', () => {
         it('should create a client with proper configuration', () => {

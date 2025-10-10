@@ -213,7 +213,7 @@ describe('People Contacts API Integration Tests', () => {
         it('should create, get, and update person addresses', async () => {
             const timestamp = Date.now();
             const addressData: Partial<AddressAttributes> = {
-                street_line_1: `${timestamp} Test Street`,
+                street: `${timestamp} Test Street`,
                 city: 'Test City',
                 state: 'TS',
                 zip: '12345',
@@ -227,10 +227,10 @@ describe('People Contacts API Integration Tests', () => {
 
             // Validate AddressResource structure
             validateResourceStructure(createResponse.data, 'Address');
-            expect(createResponse.data?.attributes?.street_line_1).toBe(addressData.street_line_1);
+            expect(createResponse.data?.attributes?.street).toBe(addressData.street);
 
             // Validate AddressAttributes
-            validateStringAttribute(createResponse.data?.attributes, 'street_line_1');
+            validateStringAttribute(createResponse.data?.attributes, 'street');
             validateStringAttribute(createResponse.data?.attributes, 'city');
             validateStringAttribute(createResponse.data?.attributes, 'state');
             validateStringAttribute(createResponse.data?.attributes, 'zip');
@@ -254,7 +254,7 @@ describe('People Contacts API Integration Tests', () => {
             expect(addressesResponse.data.length).toBeGreaterThan(0);
 
             const createdAddress = addressesResponse.data.find(
-                (address) => address.attributes?.address1 === addressData.address1
+                (address) => address.attributes?.street === addressData.street
             );
             expect(createdAddress).toBeDefined();
 

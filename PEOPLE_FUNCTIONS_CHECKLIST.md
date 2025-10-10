@@ -43,7 +43,7 @@ This document provides a comprehensive checklist of all functions available in t
 
 ### File Upload
 
-- [ ] `createPersonFileFieldData(client, personId, fieldDefinitionId, fileUrl, context?)` - Upload a file to PCO and create field data
+- [x] `createPersonFileFieldData(client, personId, fieldDefinitionId, fileUrl, context?)` - Upload a file to PCO and create field data (v2.0 implemented)
 
 ### Field Definitions
 

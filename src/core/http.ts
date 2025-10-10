@@ -336,4 +336,16 @@ export class PcoHttpClient {
     getRateLimitInfo() {
         return this.rateLimitTracker.getAllLimits();
     }
+
+    /**
+     * Get authentication header for external services (like file uploads)
+     */
+    getAuthHeader(): string {
+        if (this.config.auth.type === 'personal_access_token') {
+            return `Basic ${Buffer.from(this.config.auth.personalAccessToken).toString('base64')}`;
+        } else if (this.config.auth.type === 'oauth') {
+            return `Bearer ${this.config.auth.accessToken}`;
+        }
+        return '';
+    }
 }

@@ -92,6 +92,34 @@ export class CampusModule extends BaseModule {
     }
 
     /**
+     * Get all campuses with pagination
+     */
+    async getAllCampuses(params?: {
+        where?: Record<string, any>;
+        include?: string[];
+        per_page?: number;
+    }): Promise<CampusResource[]> {
+        const queryParams: Record<string, any> = {};
+
+        if (params?.where) {
+            Object.entries(params.where).forEach(([key, value]) => {
+                queryParams[`where[${key}]`] = value;
+            });
+        }
+
+        if (params?.include) {
+            queryParams.include = params.include.join(',');
+        }
+
+        if (params?.per_page) {
+            queryParams.per_page = params.per_page;
+        }
+
+        const result = await super.getAllPages<CampusResource>('/campuses', queryParams);
+        return result.data;
+    }
+
+    /**
      * Get all campuses with pagination support
      */
     async getAllPagesPaginated(params?: {
@@ -115,6 +143,6 @@ export class CampusModule extends BaseModule {
             queryParams.per_page = params.per_page;
         }
 
-        return this.getAllPages<CampusResource>('/campuses', queryParams, paginationOptions);
+        return super.getAllPages<CampusResource>('/campuses', queryParams, paginationOptions);
     }
 }
