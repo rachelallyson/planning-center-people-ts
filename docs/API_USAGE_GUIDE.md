@@ -1,6 +1,6 @@
-# PCO People API Usage Guide
+# API Usage Guide - v2.0.0
 
-This comprehensive guide covers all aspects of using the `@planning-center-people-ts` package for interacting with the Planning Center Online People API.
+This comprehensive guide covers all aspects of using the `@rachelallyson/planning-center-people-ts` v2.0.0 package for interacting with the Planning Center Online People API.
 
 ## Table of Contents
 
@@ -25,60 +25,61 @@ npm install @rachelallyson/planning-center-people-ts
 ### Basic Setup
 
 ```typescript
-import { createPcoClient, getPeople } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
-// Create client with app credentials
-const client = createPcoClient({
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
+// Create client with Personal Access Token
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: 'your-token'
+  }
 });
 
-// Or with OAuth access token
-const client = createPcoClient({
-  accessToken: 'your-oauth-token',
+// Or with OAuth
+const client = new PcoClient({
+  auth: {
+    type: 'oauth',
+    accessToken: 'your-oauth-token',
+    refreshToken: 'your-refresh-token',
+    onRefresh: async (tokens) => {
+      // Save new tokens to your database
+      await saveTokensToDatabase(userId, tokens);
+    }
+  }
 });
 ```
 
 ## Authentication
 
-### App Credentials (Recommended for Server Applications)
+### Personal Access Token (Recommended for Server Applications)
 
 ```typescript
-const client = createPcoClient({
-  appId: process.env.PCO_APP_ID,
-  appSecret: process.env.PCO_APP_SECRET,
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN
+  }
 });
 ```
 
-### OAuth 2.0 Access Token (For Multi-User Applications)
+### OAuth 2.0 (For Multi-User Applications)
 
 ```typescript
-const client = createPcoClient({
-  accessToken: userAccessToken,
-});
-```
-
-### OAuth 2.0 with Refresh Token Support
-
-```typescript
-const client = createPcoClient({
-  accessToken: userAccessToken,
-  refreshToken: userRefreshToken,
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
-  onTokenRefresh: async (newTokens) => {
-    // Save new tokens to your database
-    await saveTokensToDatabase(userId, newTokens);
-  },
-  onTokenRefreshFailure: async (error, context) => {
-    // Handle refresh token failures
-    console.log('Token refresh failed:', error.message);
-    if (error.message.includes('invalid_grant')) {
-      // User needs to re-authenticate
+const client = new PcoClient({
+  auth: {
+    type: 'oauth',
+    accessToken: userAccessToken,
+    refreshToken: userRefreshToken,
+    onRefresh: async (newTokens) => {
+      // Save new tokens to your database
+      await saveTokensToDatabase(userId, newTokens);
+    },
+    onRefreshFailure: async (error) => {
+      // Handle refresh token failures
+      console.error('Token refresh failed:', error.message);
       await clearUserTokens(userId);
-      redirectToLogin();
     }
-  },
+  }
 });
 ```
 
@@ -87,113 +88,9 @@ const client = createPcoClient({
 Create a `.env` file:
 
 ```env
-PCO_APP_ID=your_app_id_here
-PCO_APP_SECRET=your_app_secret_here
-```
-
-## Refresh Token Handling
-
-The library provides automatic refresh token handling for OAuth 2.0 applications. When an access token expires (401 error), the library will automatically attempt to refresh it using the provided refresh token.
-
-### Automatic Token Refresh
-
-```typescript
-import { createPcoClient, getPeople } from '@rachelallyson/planning-center-people-ts';
-
-const client = createPcoClient({
-  accessToken: 'initial-access-token',
-  refreshToken: 'refresh-token',
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
-  onTokenRefresh: async (newTokens) => {
-    // This callback is called whenever tokens are refreshed
-    console.log('New access token:', newTokens.access_token);
-    console.log('Expires in:', newTokens.expires_in, 'seconds');
-    
-    // Save to your database
-    await saveTokensToDatabase(userId, newTokens);
-  },
-});
-
-// If the access token is expired, it will be automatically refreshed
-const people = await getPeople(client);
-```
-
-### Manual Token Refresh
-
-```typescript
-import { refreshAccessToken, updateClientTokens } from '@rachelallyson/planning-center-people-ts';
-
-// Manually refresh tokens
-const newTokens = await refreshAccessToken(client, 'refresh-token');
-
-// Update client with new tokens
-updateClientTokens(client, newTokens);
-```
-
-### Error Handling
-
-```typescript
-// Option 1: Handle errors in try/catch
-try {
-  const people = await getPeople(client);
-} catch (error) {
-  if (error.message.includes('Token refresh failed')) {
-    // Refresh token is invalid - user needs to re-authenticate
-    redirectToLogin();
-  } else {
-    // Other API error
-    console.error('API error:', error);
-  }
-}
-
-// Option 2: Use failure callback (recommended)
-const client = createPcoClient({
-  accessToken: userAccessToken,
-  refreshToken: userRefreshToken,
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
-  onTokenRefreshFailure: async (error, context) => {
-    // This is called automatically when refresh fails
-    if (error.message.includes('invalid_grant')) {
-      await clearUserTokens(userId);
-      redirectToLogin();
-    } else if (error.message.includes('Network error')) {
-      showNetworkErrorToast();
-    }
-  },
-});
-```
-
-### Token Storage Best Practices
-
-```typescript
-class TokenManager {
-  async saveTokens(userId: string, tokens: TokenResponse): Promise<void> {
-    const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-    
-    await database.tokens.upsert({
-      userId,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      expiresAt,
-    });
-  }
-
-  async getTokens(userId: string): Promise<TokenResponse | null> {
-    const stored = await database.tokens.findByUserId(userId);
-    if (!stored || stored.expiresAt < new Date()) {
-      return null;
-    }
-    
-    return {
-      access_token: stored.accessToken,
-      refresh_token: stored.refreshToken,
-      token_type: 'Bearer',
-      expires_in: Math.floor((stored.expiresAt.getTime() - Date.now()) / 1000),
-    };
-  }
-}
+PCO_PERSONAL_ACCESS_TOKEN=your_personal_access_token_here
+PCO_ACCESS_TOKEN=your_oauth_access_token_here
+PCO_REFRESH_TOKEN=your_oauth_refresh_token_here
 ```
 
 ## Basic Operations
@@ -201,255 +98,233 @@ class TokenManager {
 ### Getting People
 
 ```typescript
-import { getPeople, getPerson } from '@rachelallyson/planning-center-people-ts';
-
 // Get all people
-const people = await getPeople(client);
+const people = await client.people.getAll();
 
 // Get people with filtering
-const activePeople = await getPeople(client, {
+const activePeople = await client.people.getAll({
   where: { status: 'active' },
-  per_page: 50,
+  perPage: 50
 });
 
 // Get people with related data
-const peopleWithEmails = await getPeople(client, {
-  include: ['emails', 'phone_numbers', 'household'],
+const peopleWithEmails = await client.people.getAll({
+  include: ['emails', 'phone_numbers', 'household']
 });
 
 // Get a specific person
-const person = await getPerson(client, 'person-id', {
-  include: ['emails', 'phone_numbers', 'addresses'],
-});
+const person = await client.people.getById('person-id', ['emails', 'phone_numbers']);
 ```
 
 ### Creating People
 
 ```typescript
-import { createPerson } from '@rachelallyson/planning-center-people-ts';
-
-const newPerson = await createPerson(client, {
+// Basic person creation
+const newPerson = await client.people.create({
   first_name: 'John',
   last_name: 'Doe',
-  status: 'active',
+  status: 'active'
 });
+
+// Create person with contacts
+const personWithContacts = await client.people.createWithContacts(
+  { first_name: 'John', last_name: 'Doe' },
+  {
+    email: { address: 'john@example.com', primary: true },
+    phone: { number: '+1-555-123-4567', location: 'Mobile' }
+  }
+);
 ```
 
 ### Updating People
 
 ```typescript
-import { updatePerson } from '@rachelallyson/planning-center-people-ts';
-
-const updatedPerson = await updatePerson(client, 'person-id', {
+const updatedPerson = await client.people.update('person-id', {
   first_name: 'Jane',
-  last_name: 'Smith',
+  last_name: 'Smith'
 });
 ```
 
 ### Managing Contact Information
 
 ```typescript
-import { 
-  createPersonEmail, 
-  createPersonPhoneNumber,
-  createPersonAddress 
-} from '@rachelallyson/planning-center-people-ts';
-
 // Add email
-const email = await createPersonEmail(client, 'person-id', {
+const email = await client.people.addEmail('person-id', {
   address: 'john@example.com',
   location: 'Home',
-  primary: true,
+  primary: true
 });
 
 // Add phone number
-const phone = await createPersonPhoneNumber(client, 'person-id', {
+const phone = await client.people.addPhoneNumber('person-id', {
   number: '+1-555-123-4567',
   location: 'Mobile',
-  primary: true,
+  primary: true
 });
 
 // Add address
-const address = await createPersonAddress(client, 'person-id', {
+const address = await client.people.addAddress('person-id', {
   address1: '123 Main St',
   city: 'Anytown',
   state: 'CA',
   zip: '12345',
   location: 'Home',
-  primary: true,
+  primary: true
 });
 ```
 
 ## Advanced Features
 
-### Using Helper Functions
+### Person Matching
+
+The library provides intelligent person matching to avoid duplicates:
 
 ```typescript
-import { 
-  getCompletePersonProfile,
-  createPersonWithContact,
-  searchPeople,
-  getPersonWorkflowCardsWithNotes 
-} from '@rachelallyson/planning-center-people-ts';
-
-// Get complete person profile
-const profile = await getCompletePersonProfile(client, 'person-id');
-
-// Create person with initial contact info
-const personWithContact = await createPersonWithContact(client, {
-  first_name: 'John',
-  last_name: 'Doe',
+// Find existing person or create new one
+const person = await client.people.findOrCreate({
+  firstName: 'John',
+  lastName: 'Doe',
   email: 'john@example.com',
-  phone: '+1-555-123-4567',
-  address: {
-    address1: '123 Main St',
-    city: 'Anytown',
-    state: 'CA',
-    zip: '12345',
-  },
+  matchStrategy: 'fuzzy' // or 'exact'
 });
 
-// Search for people
-const searchResults = await searchPeople(client, {
-  name: 'John',
-  status: 'active',
+// Just find existing person
+const matcher = new PersonMatcher(client);
+const match = await matcher.findMatch({
+  firstName: 'John',
+  lastName: 'Doe',
+  matchStrategy: 'fuzzy'
 });
 
-// Get workflow cards with notes
-const workflowCards = await getPersonWorkflowCardsWithNotes(client, 'person-id');
+if (match) {
+  console.log(`Found person with ${match.confidence}% confidence`);
+}
+```
+
+### Event System
+
+Monitor API calls and errors with the built-in event system:
+
+```typescript
+// Listen to request events
+client.on('request:start', (event) => {
+  console.log(`Starting ${event.method} ${event.endpoint}`);
+});
+
+client.on('request:complete', (event) => {
+  console.log(`Completed in ${event.duration}ms`);
+});
+
+// Listen to errors
+client.on('error', (event) => {
+  console.error('API Error:', event.error.message);
+});
+
+// Listen to rate limiting
+client.on('rate:limit', (event) => {
+  console.log(`Rate limit reached. Retry after ${event.retryAfter}ms`);
+});
+```
+
+### Client Management
+
+Use `PcoClientManager` for automatic client caching and lifecycle management:
+
+```typescript
+import { PcoClientManager } from '@rachelallyson/planning-center-people-ts';
+
+const manager = new PcoClientManager();
+
+// Get or create client for user
+const client = await manager.getClient('user-id', {
+  auth: {
+    type: 'oauth',
+    accessToken: userToken,
+    refreshToken: userRefreshToken
+  }
+});
+
+// Cleanup expired clients
+await manager.cleanup();
+```
+
+### Working with Workflows
+
+```typescript
+// Get all workflows
+const workflows = await client.workflows.getAll();
+
+// Get workflow cards for a person
+const cards = await client.workflows.getPersonWorkflowCards('person-id');
+
+// Create a new workflow card
+const card = await client.workflows.createWorkflowCard('person-id', 'workflow-id', {
+  title: 'Follow up call',
+  description: 'Call to discuss membership'
+});
+
+// Perform workflow actions
+await client.workflows.promoteWorkflowCard('person-id', 'card-id');
+await client.workflows.snoozeWorkflowCard('person-id', 'card-id', { duration: 7 });
+await client.workflows.sendEmailWorkflowCard('person-id', 'card-id', {
+  subject: 'Follow up',
+  note: 'Thank you for your interest'
+});
+```
+
+### Custom Fields
+
+```typescript
+// Get field definitions
+const fieldDefs = await client.fields.getFieldDefinitions();
+
+// Set field data with smart file upload handling
+const fieldData = await client.fields.setPersonFieldById(
+  'person-id',
+  'field-def-id',
+  '<a href="https://example.com/document.pdf" download>View File</a>'
+);
+
+// Get person's field data
+const personFieldData = await client.fields.getPersonFieldData('person-id');
 ```
 
 ### Working with Lists
 
 ```typescript
-import { getLists, getListById } from '@rachelallyson/planning-center-people-ts';
-
 // Get all lists
-const lists = await getLists(client);
+const lists = await client.lists.getAll();
 
-// Get specific list
-const list = await getListById(client, 'list-id', {
-  include: ['people', 'category'],
+// Get people in a list
+const people = await client.lists.getPeople('list-id');
+
+// Get list categories
+const categories = await client.lists.getListCategories();
+
+// Create list category
+const category = await client.lists.createListCategory({
+  name: 'New Category'
 });
 ```
 
-### Managing Workflows
+### Managing Notes
 
 ```typescript
-import { 
-  getWorkflows, 
-  getWorkflow,
-  getWorkflowCards,
-  createWorkflowCard 
-} from '@rachelallyson/planning-center-people-ts';
-
-// Get all workflows
-const workflows = await getWorkflows(client);
-
-// Get workflow cards for a person
-const cards = await getWorkflowCards(client, 'person-id');
-
-// Create a new workflow card
-const card = await createWorkflowCard(client, 'person-id', 'workflow-id', {
-  title: 'Follow up call',
-  description: 'Call to discuss membership',
-});
-```
-
-### Working with Notes
-
-```typescript
-import { getNotes, getNote } from '@rachelallyson/planning-center-people-ts';
-
 // Get all notes
-const notes = await getNotes(client);
+const notes = await client.notes.getAll();
 
 // Get notes for a specific person
-const personNotes = await getNotes(client, {
-  where: { person_id: 'person-id' },
+const personNotes = await client.notes.getAll({
+  where: { person_id: 'person-id' }
+});
+
+// Create a note
+const note = await client.notes.create({
+  content: 'This is a note about the person',
+  person_id: 'person-id',
+  category_id: 'category-id'
 });
 ```
-
-### File Upload Handling
-
-The library provides intelligent file upload handling for custom fields that can automatically detect file URLs and handle them appropriately based on the field type.
-
-#### Basic File Upload Detection
-
-```typescript
-import { 
-  isFileUpload, 
-  extractFileUrl, 
-  processFileValue 
-} from '@rachelallyson/planning-center-people-ts';
-
-// Check if a value contains a file URL
-const htmlFileValue = '<a href="https://onark.s3.us-east-1.amazonaws.com/document.pdf" download>View File</a>';
-const cleanFileUrl = 'https://onark.s3.us-east-1.amazonaws.com/image.jpg';
-const textValue = 'This is just regular text';
-
-console.log(isFileUpload(htmlFileValue)); // true
-console.log(isFileUpload(cleanFileUrl)); // true
-console.log(isFileUpload(textValue)); // false
-
-// Extract clean URLs from HTML markup
-const cleanUrl = extractFileUrl(htmlFileValue);
-console.log(cleanUrl); // https://onark.s3.us-east-1.amazonaws.com/document.pdf
-```
-
-#### Smart Field Data Creation
-
-The `createPersonFieldData` function automatically determines whether a field is a file field or text field and handles the upload appropriately:
-
-```typescript
-import { createPersonFieldData } from '@rachelallyson/planning-center-people-ts';
-
-// This will automatically:
-// 1. Check the field definition to determine if it's a file field
-// 2. For file fields: Use file upload method (handles both clean URLs and HTML markup)
-// 3. For text fields: Clean file URLs from HTML markup and store as text
-const result = await createPersonFieldData(
-  client,
-  'person-id',
-  'field-definition-id',
-  '<a href="https://example.com/document.pdf" download>View File</a>'
-);
-```
-
-**Note**: This function will throw an error if the field definition cannot be found, ensuring data integrity.
-
-#### Manual File Processing
-
-For more control, you can manually process file values:
-
-```typescript
-import { processFileValue } from '@rachelallyson/planning-center-people-ts';
-
-const fileUrl = 'https://example.com/document.pdf';
-
-// For text fields - returns clean URL string
-const textResult = processFileValue(fileUrl, 'text');
-console.log(textResult); // "https://example.com/document.pdf"
-
-// For file fields - returns metadata object
-const fileResult = processFileValue(fileUrl, 'file');
-console.log(fileResult); 
-// {
-//   url: "https://example.com/document.pdf",
-//   filename: "document.pdf",
-//   contentType: "application/pdf"
-// }
-```
-
-#### File Upload Requirements
-
-For file uploads to work properly, you need to install the required dependencies:
-
-```bash
-npm install axios form-data
-```
-
-The library will automatically use these packages when handling file uploads. If they're not installed, you'll get a helpful error message.
 
 ## Error Handling
 
@@ -459,7 +334,7 @@ The library will automatically use these packages when handling file uploads. If
 import { PcoApiError } from '@rachelallyson/planning-center-people-ts';
 
 try {
-  const people = await getPeople(client);
+  const people = await client.people.getAll();
 } catch (error) {
   if (error instanceof PcoApiError) {
     console.error('API Error:', error.status, error.message);
@@ -473,105 +348,129 @@ try {
 ### Advanced Error Handling with Recovery
 
 ```typescript
-import { 
-  retryWithExponentialBackoff,
-  attemptRecovery,
-  classifyError 
-} from '@rachelallyson/planning-center-people-ts';
-
-try {
-  const people = await retryWithExponentialBackoff(
-    () => getPeople(client),
-    { maxRetries: 3, baseDelay: 1000 }
-  );
-} catch (error) {
-  const classification = classifyError(error);
+// Using the event system for error handling
+client.on('error', (event) => {
+  console.error('API Error:', {
+    message: event.error.message,
+    method: event.method,
+    endpoint: event.endpoint,
+    timestamp: event.timestamp
+  });
   
-  if (classification.retryable) {
-    // Attempt recovery
-    const result = await attemptRecovery(
-      () => getPeople(client),
-      error,
-      { client, operation: 'getPeople' }
-    );
-  } else {
-    console.error('Non-retryable error:', classification.userMessage);
+  // Handle specific error types
+  if (event.error instanceof PcoApiError) {
+    switch (event.error.status) {
+      case 401:
+        console.log('Authentication failed - token may be expired');
+        break;
+      case 403:
+        console.log('Insufficient permissions');
+        break;
+      case 429:
+        console.log('Rate limit exceeded');
+        break;
+      default:
+        console.log('Other API error');
+    }
   }
-}
+});
 ```
 
-### Circuit Breaker Pattern
+### Retry Logic
 
 ```typescript
-import { CircuitBreaker } from '@rachelallyson/planning-center-people-ts';
-
-const circuitBreaker = new CircuitBreaker(5, 60000); // 5 failures, 1 minute timeout
-
-try {
-  const people = await circuitBreaker.execute(() => getPeople(client));
-} catch (error) {
-  console.error('Circuit breaker is open or operation failed:', error);
+async function withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Wait before retry
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw new Error('Unexpected error in retry logic');
 }
+
+// Usage
+const people = await withRetry(() => client.people.getAll());
 ```
 
 ## Performance Optimization
 
-### Caching
+### Caching Strategy
 
 ```typescript
-import { ApiCache, getCachedPeople } from '@rachelallyson/planning-center-people-ts';
+// Simple in-memory cache
+const cache = new Map<string, { data: any; expires: number }>();
 
-const cache = new ApiCache();
-
-// Use cached version
-const people = await getCachedPeople(client, cache, { per_page: 50 }, 300000); // 5 min TTL
+async function getCachedPeople(params: any = {}) {
+  const cacheKey = `people:${JSON.stringify(params)}`;
+  const cached = cache.get(cacheKey);
+  
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+  
+  const people = await client.people.getAll(params);
+  cache.set(cacheKey, {
+    data: people,
+    expires: Date.now() + 5 * 60 * 1000 // 5 minutes
+  });
+  
+  return people;
+}
 ```
 
 ### Batch Processing
 
 ```typescript
-import { batchFetchPersonDetails } from '@rachelallyson/planning-center-people-ts';
-
-const personIds = ['id1', 'id2', 'id3', 'id4', 'id5'];
-const personDetails = await batchFetchPersonDetails(client, personIds, {
-  includeEmails: true,
-  includePhones: true,
-  batchSize: 10,
-});
-```
-
-### Streaming Large Datasets
-
-```typescript
-import { streamPeopleData } from '@rachelallyson/planning-center-people-ts';
-
-for await (const batch of streamPeopleData(client, {
-  perPage: 100,
-  maxConcurrent: 3,
-  where: { status: 'active' },
-})) {
-  console.log(`Processing ${batch.length} people`);
-  // Process batch
-}
-```
-
-### Performance Monitoring
-
-```typescript
-import { PerformanceMonitor, monitorPerformance } from '@rachelallyson/planning-center-people-ts';
-
-const monitor = new PerformanceMonitor();
-
-class PeopleService {
-  @monitorPerformance(monitor, 'getPeople')
-  async getPeople() {
-    return getPeople(client);
+async function processPeopleInBatches(people: any[], batchSize = 10) {
+  const results = [];
+  
+  for (let i = 0; i < people.length; i += batchSize) {
+    const batch = people.slice(i, i + batchSize);
+    
+    const batchResults = await Promise.allSettled(
+      batch.map(async (person) => {
+        // Process each person
+        return await client.people.update(person.id, { status: 'processed' });
+      })
+    );
+    
+    results.push(...batchResults);
   }
+  
+  return results;
 }
+```
 
-// Get metrics
-const metrics = monitor.getMetrics();
-console.log('Performance metrics:', metrics);
+### Rate Limit Management
+
+```typescript
+// Listen to rate limit events
+client.on('rate:limit', (event) => {
+  console.log(`Rate limit reached. Retry after ${event.retryAfter}ms`);
+  
+  // Implement your own rate limiting logic
+  setTimeout(() => {
+    console.log('Rate limit window reset, resuming operations');
+  }, event.retryAfter);
+});
+
+// Configure client with conservative rate limits
+const client = new PcoClient({
+  auth: { type: 'personal_access_token', personalAccessToken: 'token' },
+  rateLimit: {
+    maxRequests: 80, // Leave headroom
+    perMilliseconds: 60000
+  }
+});
 ```
 
 ## Best Practices
@@ -580,22 +479,22 @@ console.log('Performance metrics:', metrics);
 
 ```typescript
 // Good: Use reasonable page sizes
-const people = await getPeople(client, { per_page: 50 });
+const people = await client.people.getAll({ perPage: 50 });
 
 // Avoid: Very large page sizes
-const people = await getPeople(client, { per_page: 10000 }); // Too large
+const people = await client.people.getAll({ perPage: 10000 }); // Too large
 ```
 
 ### 2. Include Only Necessary Data
 
 ```typescript
 // Good: Include only what you need
-const people = await getPeople(client, { 
+const people = await client.people.getAll({ 
   include: ['emails'] // Only emails
 });
 
 // Avoid: Including everything
-const people = await getPeople(client, { 
+const people = await client.people.getAll({ 
   include: ['emails', 'phone_numbers', 'addresses', 'social_profiles', 'field_data'] // Too much
 });
 ```
@@ -603,41 +502,51 @@ const people = await getPeople(client, {
 ### 3. Handle Rate Limits Gracefully
 
 ```typescript
-import { retryWithExponentialBackoff } from '@rachelallyson/planning-center-people-ts';
-
-const people = await retryWithExponentialBackoff(
-  () => getPeople(client),
-  { 
-    maxRetries: 3,
-    baseDelay: 1000,
-    retryableStatuses: [429, 500, 502, 503, 504]
-  }
-);
+// Use the event system to handle rate limits
+client.on('rate:limit', (event) => {
+  // Implement exponential backoff
+  const delay = Math.min(event.retryAfter * 1.5, 30000);
+  setTimeout(() => {
+    console.log('Resuming after rate limit');
+  }, delay);
+});
 ```
 
-### 4. Use Bulk Operations for Multiple Items
+### 4. Use Person Matching to Avoid Duplicates
 
 ```typescript
-import { executeBulkOperation } from '@rachelallyson/planning-center-people-ts';
+// Always use findOrCreate for new people
+const person = await client.people.findOrCreate({
+  firstName: 'John',
+  lastName: 'Doe',
+  email: 'john@example.com',
+  matchStrategy: 'fuzzy'
+});
+```
 
-const people = [
-  { first_name: 'John', last_name: 'Doe' },
-  { first_name: 'Jane', last_name: 'Smith' },
-];
+### 5. Implement Proper Error Handling
 
-const results = await executeBulkOperation(
-  people,
-  (person) => createPerson(client, person),
-  { 
-    continueOnError: true,
-    batchSize: 5,
-    onItemComplete: (index, result) => {
-      console.log(`Person ${index} processed:`, result);
+```typescript
+// Use the event system for comprehensive error handling
+client.on('error', (event) => {
+  // Log errors
+  console.error('API Error:', event.error.message);
+  
+  // Handle specific error types
+  if (event.error instanceof PcoApiError) {
+    switch (event.error.status) {
+      case 401:
+        // Handle authentication errors
+        break;
+      case 403:
+        // Handle permission errors
+        break;
+      case 429:
+        // Handle rate limiting
+        break;
     }
   }
-);
-
-console.log(`Success: ${results.successful.length}, Failed: ${results.failed.length}`);
+});
 ```
 
 ## Common Patterns
@@ -645,66 +554,86 @@ console.log(`Success: ${results.successful.length}, Failed: ${results.failed.len
 ### 1. Data Export
 
 ```typescript
-import { exportAllPeopleData } from '@rachelallyson/planning-center-people-ts';
-
-const allData = await exportAllPeopleData(client, {
-  includeInactive: false,
-  includeFieldData: true,
-  includeWorkflowCards: true,
-  batchSize: 50,
-});
-
-console.log(`Exported ${allData.length} people`);
+async function exportAllPeopleData() {
+  const allPeople = [];
+  let page = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const response = await client.people.getAll({
+      perPage: 100,
+      page,
+      include: ['emails', 'phone_numbers', 'addresses']
+    });
+    
+    allPeople.push(...response.data);
+    hasMore = response.meta.next !== undefined;
+    page++;
+  }
+  
+  return allPeople;
+}
 ```
 
 ### 2. Person Search and Filter
 
 ```typescript
-import { searchPeople } from '@rachelallyson/planning-center-people-ts';
-
-// Search by name
-const johns = await searchPeople(client, { name: 'John' });
-
-// Search by email
-const emailMatches = await searchPeople(client, { email: 'john@example.com' });
-
-// Search by status
-const activePeople = await searchPeople(client, { status: 'active' });
+async function searchPeople(searchTerm: string) {
+  // Search by name
+  const nameResults = await client.people.getAll({
+    where: { first_name: searchTerm }
+  });
+  
+  // Search by email
+  const emailResults = await client.people.getAll({
+    where: { email: searchTerm }
+  });
+  
+  return {
+    byName: nameResults.data,
+    byEmail: emailResults.data
+  };
+}
 ```
 
 ### 3. Workflow Management
 
 ```typescript
-import { 
-  getPersonWorkflowCardsWithNotes,
-  createWorkflowCardWithNote 
-} from '@rachelallyson/planning-center-people-ts';
-
-// Get all workflow cards with notes
-const cardsWithNotes = await getPersonWorkflowCardsWithNotes(client, 'person-id');
-
-// Create workflow card with initial note
-const cardWithNote = await createWorkflowCardWithNote(
-  client, 
-  'person-id', 
-  'workflow-id',
-  {
-    title: 'Follow up',
-    description: 'Call to discuss membership',
-    initialNote: 'Initial contact made'
+async function manageWorkflowForPerson(personId: string, workflowId: string) {
+  // Get existing workflow cards
+  const existingCards = await client.workflows.getPersonWorkflowCards(personId);
+  
+  // Create new workflow card if none exist
+  if (existingCards.data.length === 0) {
+    const card = await client.workflows.createWorkflowCard(personId, workflowId, {
+      title: 'Initial follow-up',
+      description: 'Welcome new member'
+    });
+    
+    // Add initial note
+    await client.workflows.createWorkflowCardNote(personId, card.id, {
+      note: 'Workflow started automatically'
+    });
   }
-);
+}
 ```
 
 ### 4. Organization Statistics
 
 ```typescript
-import { getOrganizationInfo } from '@rachelallyson/planning-center-people-ts';
-
-const orgInfo = await getOrganizationInfo(client);
-console.log(`Organization: ${orgInfo.organization.attributes?.name}`);
-console.log(`Total People: ${orgInfo.stats.totalPeople}`);
-console.log(`Total Households: ${orgInfo.stats.totalHouseholds}`);
+async function getOrganizationStats() {
+  const [people, households, workflows] = await Promise.all([
+    client.people.getAll({ perPage: 1 }),
+    client.households.getAll({ perPage: 1 }),
+    client.workflows.getAll({ perPage: 1 })
+  ]);
+  
+  return {
+    totalPeople: people.meta.total_count,
+    totalHouseholds: households.meta.total_count,
+    totalWorkflows: workflows.meta.total_count
+  };
+}
 ```
 
 ## Troubleshooting
@@ -715,91 +644,98 @@ console.log(`Total Households: ${orgInfo.stats.totalHouseholds}`);
 
 ```typescript
 // Check your credentials
-console.log('App ID:', !!client.config.appId);
-console.log('App Secret:', !!client.config.appSecret);
-console.log('Access Token:', !!client.config.accessToken);
+console.log('Personal Access Token:', !!process.env.PCO_PERSONAL_ACCESS_TOKEN);
+console.log('OAuth Access Token:', !!process.env.PCO_ACCESS_TOKEN);
+console.log('OAuth Refresh Token:', !!process.env.PCO_REFRESH_TOKEN);
 ```
 
 #### 2. Rate Limit Errors
 
 ```typescript
-// Handle rate limits
-try {
-  const people = await getPeople(client);
-} catch (error) {
-  if (error instanceof PcoApiError && error.status === 429) {
-    const retryAfter = error.rateLimitHeaders?.['Retry-After'];
-    console.log(`Rate limited. Retry after ${retryAfter} seconds`);
-  }
-}
+// Handle rate limits with the event system
+client.on('rate:limit', (event) => {
+  console.log(`Rate limited. Retry after ${event.retryAfter}ms`);
+  console.log(`Limit: ${event.limit}, Remaining: ${event.remaining}`);
+});
 ```
 
 #### 3. Network Timeouts
 
 ```typescript
-import { withTimeout } from '@rachelallyson/planning-center-people-ts';
-
-try {
-  const people = await withTimeout(
-    () => getPeople(client),
-    30000, // 30 seconds
-    'Request timed out'
-  );
-} catch (error) {
-  console.error('Timeout error:', error.message);
-}
+// Configure timeout
+const client = new PcoClient({
+  auth: { type: 'personal_access_token', personalAccessToken: 'token' },
+  timeout: 30000 // 30 seconds
+});
 ```
 
 #### 4. Large Dataset Handling
 
 ```typescript
-import { fetchAllPages } from '@rachelallyson/planning-center-people-ts';
-
-// For very large datasets
-const allPeople = await fetchAllPages(
-  client,
-  (page, perPage) => getPeople(client, { page, per_page: perPage }),
-  {
-    perPage: 100,
-    onProgress: (current, total) => {
-      console.log(`Progress: ${current}/${total}`);
+// Stream large datasets
+async function* streamAllPeople() {
+  let page = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const response = await client.people.getAll({
+      perPage: 100,
+      page
+    });
+    
+    for (const person of response.data) {
+      yield person;
     }
+    
+    hasMore = response.meta.next !== undefined;
+    page++;
   }
-);
+}
+
+// Usage
+for await (const person of streamAllPeople()) {
+  console.log(`Processing ${person.attributes.first_name} ${person.attributes.last_name}`);
+}
 ```
 
 ### Debug Mode
 
 ```typescript
-// Enable debug logging
-const client = createPcoClient({
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
-  headers: {
-    'X-Debug': 'true', // If supported by your setup
-  },
+// Enable debug logging with the event system
+client.on('request:start', (event) => {
+  console.log(`[DEBUG] Starting ${event.method} ${event.endpoint}`);
+});
+
+client.on('request:complete', (event) => {
+  console.log(`[DEBUG] Completed ${event.method} ${event.endpoint} in ${event.duration}ms`);
+});
+
+client.on('error', (event) => {
+  console.error(`[DEBUG] Error in ${event.method} ${event.endpoint}:`, event.error.message);
 });
 ```
 
 ### Error Reporting
 
 ```typescript
-import { createErrorReport } from '@rachelallyson/planning-center-people-ts';
-
-try {
-  const people = await getPeople(client);
-} catch (error) {
-  const report = createErrorReport(error, {
-    operation: 'getPeople',
-    client,
-    requestInfo: {
-      url: '/people/v2/people',
-      method: 'GET',
-    },
-  });
+// Comprehensive error reporting
+client.on('error', (event) => {
+  const errorReport = {
+    timestamp: event.timestamp,
+    method: event.method,
+    endpoint: event.endpoint,
+    error: {
+      message: event.error.message,
+      stack: event.error.stack,
+      ...(event.error instanceof PcoApiError && {
+        status: event.error.status,
+        errors: event.error.errors
+      })
+    }
+  };
   
-  console.error('Error report:', JSON.stringify(report, null, 2));
-}
+  console.error('Error report:', JSON.stringify(errorReport, null, 2));
+});
 ```
 
 ## Type Safety
@@ -824,8 +760,8 @@ import type {
 } from '@rachelallyson/planning-center-people-ts';
 
 // All resources are fully typed
-const person: PersonResource = await getPerson(client, 'person-id');
+const person: PersonResource = await client.people.getById('person-id');
 const emails: EmailResource[] = person.relationships?.emails?.data || [];
 ```
 
-This guide covers the essential patterns and best practices for using the PCO People API client effectively. For more specific use cases, refer to the individual function documentation and examples.
+This guide covers the essential patterns and best practices for using the PCO People API client v2.0.0 effectively. For more specific use cases, refer to the individual module documentation and examples.

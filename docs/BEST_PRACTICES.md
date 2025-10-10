@@ -1,6 +1,6 @@
-# Best Practices Guide
+# Best Practices Guide - v2.0.0
 
-This guide covers best practices for production usage, security, performance, and maintainability when using the Planning Center People TypeScript library.
+This guide covers best practices for production usage, security, performance, and maintainability when using the Planning Center People TypeScript library v2.0.0.
 
 ## Table of Contents
 
@@ -24,10 +24,11 @@ This guide covers best practices for production usage, security, performance, an
 
 ```typescript
 // Use environment variables for all credentials
-const client = createPcoClient({
-  appId: process.env.PCO_APP_ID!,
-  appSecret: process.env.PCO_APP_SECRET!,
-  personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  }
 });
 ```
 
@@ -35,10 +36,11 @@ const client = createPcoClient({
 
 ```typescript
 // Never hardcode credentials
-const client = createPcoClient({
-  appId: 'abc123', // ❌ Hardcoded
-  appSecret: 'secret456', // ❌ Hardcoded
-  personalAccessToken: 'token789', // ❌ Hardcoded
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: 'abc123' // ❌ Hardcoded
+  }
 });
 ```
 
@@ -46,15 +48,13 @@ const client = createPcoClient({
 
 ```bash
 # .env (never commit to version control)
-PCO_APP_ID=your_app_id_here
-PCO_APP_SECRET=your_app_secret_here
 PCO_PERSONAL_ACCESS_TOKEN=your_token_here
+PCO_ACCESS_TOKEN=your_oauth_access_token_here
+PCO_REFRESH_TOKEN=your_oauth_refresh_token_here
 
 # Use different values for different environments
-PCO_APP_ID_DEV=dev_app_id
-PCO_APP_SECRET_DEV=dev_app_secret
-PCO_APP_ID_PROD=prod_app_id
-PCO_APP_SECRET_PROD=prod_app_secret
+PCO_PERSONAL_ACCESS_TOKEN_DEV=dev_token
+PCO_PERSONAL_ACCESS_TOKEN_PROD=prod_token
 ```
 
 #### Token Storage Security
@@ -106,8 +106,11 @@ await database.tokens.save({
 
 ```typescript
 // Force HTTPS in production
-const client = createPcoClient({
-  // ... other config
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  },
   baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://api.planningcenteronline.com/people/v2'
     : 'http://localhost:3000/api/pco', // Development only
@@ -118,7 +121,11 @@ const client = createPcoClient({
 
 ```typescript
 // Never use HTTP in production
-const client = createPcoClient({
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  },
   baseURL: 'http://api.planningcenteronline.com/people/v2', // ❌ Insecure
 });
 ```
@@ -150,9 +157,9 @@ function validatePersonData(data: any): Partial<PersonAttributes> {
   return validated;
 }
 
-async function createPersonSafely(client: PcoClientState, data: any) {
+async function createPersonSafely(client: PcoClient, data: any) {
   const validatedData = validatePersonData(data);
-  return await createPerson(client, validatedData);
+  return await client.people.create(validatedData);
 }
 ```
 
@@ -160,8 +167,8 @@ async function createPersonSafely(client: PcoClientState, data: any) {
 
 ```typescript
 // Never trust user input
-async function createPersonUnsafe(client: PcoClientState, data: any) {
-  return await createPerson(client, data); // ❌ No validation
+async function createPersonUnsafe(client: PcoClient, data: any) {
+  return await client.people.create(data); // ❌ No validation
 }
 ```
 
@@ -172,7 +179,7 @@ async function createPersonUnsafe(client: PcoClientState, data: any) {
 ```typescript
 // Implement proper access control
 class SecurePeopleService {
-  constructor(private client: PcoClientState, private userPermissions: UserPermissions) {}
+  constructor(private client: PcoClient, private userPermissions: UserPermissions) {}
   
   async getPerson(personId: string, userId: string): Promise<PersonResource | null> {
     // Check if user has permission to view this person
@@ -180,7 +187,7 @@ class SecurePeopleService {
       throw new Error('Insufficient permissions');
     }
     
-    return await getPerson(this.client, personId);
+    return await this.client.people.getById(personId);
   }
   
   async updatePerson(personId: string, data: any, userId: string): Promise<PersonResource> {
@@ -191,7 +198,7 @@ class SecurePeopleService {
     
     // Validate and sanitize data
     const validatedData = validatePersonData(data);
-    return await updatePerson(this.client, personId, validatedData);
+    return await this.client.people.update(personId, validatedData);
   }
 }
 ```
@@ -205,32 +212,17 @@ class SecurePeopleService {
 ```typescript
 // Production-optimized client configuration
 function createProductionClient() {
-  return createPcoClient({
-    appId: process.env.PCO_APP_ID!,
-    appSecret: process.env.PCO_APP_SECRET!,
-    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
+  return new PcoClient({
+    auth: {
+      type: 'personal_access_token',
+      personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+    },
     
     // Performance optimizations
     timeout: 30000,
     rateLimit: {
       maxRequests: 90, // Leave headroom
       perMilliseconds: 60000
-    },
-    
-    // Retry configuration
-    retry: {
-      maxRetries: 3,
-      baseDelay: 1000,
-      maxDelay: 30000,
-      onRetry: (error, attempt) => {
-        console.log(`Retry attempt ${attempt}:`, error.message);
-      }
-    },
-    
-    // Custom headers for monitoring
-    headers: {
-      'User-Agent': `MyApp/1.0.0 (${process.env.NODE_ENV})`,
-      'X-Request-ID': () => generateRequestId()
     }
   });
 }
@@ -243,24 +235,23 @@ function createProductionClient() {
 class Config {
   static get clientConfig() {
     const baseConfig = {
-      appId: process.env.PCO_APP_ID!,
-      appSecret: process.env.PCO_APP_SECRET!,
-      personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
+      auth: {
+        type: 'personal_access_token' as const,
+        personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+      }
     };
     
     if (process.env.NODE_ENV === 'production') {
       return {
         ...baseConfig,
         timeout: 30000,
-        rateLimit: { maxRequests: 90, perMilliseconds: 60000 },
-        retry: { maxRetries: 3, baseDelay: 1000, maxDelay: 30000 }
+        rateLimit: { maxRequests: 90, perMilliseconds: 60000 }
       };
     } else if (process.env.NODE_ENV === 'development') {
       return {
         ...baseConfig,
         timeout: 60000, // Longer timeout for debugging
-        rateLimit: { maxRequests: 50, perMilliseconds: 60000 },
-        retry: { maxRetries: 1, baseDelay: 500 }
+        rateLimit: { maxRequests: 50, perMilliseconds: 60000 }
       };
     } else {
       return baseConfig;
@@ -301,8 +292,15 @@ export async function healthCheck(req: Request, res: Response) {
 
 async function checkPcoHealth(): Promise<{ healthy: boolean; latency?: number }> {
   try {
+    const client = new PcoClient({
+      auth: {
+        type: 'personal_access_token',
+        personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+      }
+    });
+    
     const start = Date.now();
-    await getOrganization(client);
+    await client.organization.get();
     const latency = Date.now() - start;
     
     return { healthy: true, latency };
@@ -350,11 +348,9 @@ class ErrorHandler {
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-        ...(error instanceof PcoError && {
-          category: error.category,
-          severity: error.severity,
+        ...(error instanceof PcoApiError && {
           status: error.status,
-          retryable: error.retryable
+          errors: error.errors
         })
       },
       metadata: context.metadata
@@ -364,17 +360,17 @@ class ErrorHandler {
   }
   
   private handleErrorByType(error: unknown, context: any) {
-    if (error instanceof PcoError) {
-      switch (error.category) {
-        case ErrorCategory.AUTHENTICATION:
+    if (error instanceof PcoApiError) {
+      switch (error.status) {
+        case 401:
           // Handle authentication errors
           this.handleAuthenticationError(error, context);
           break;
-        case ErrorCategory.RATE_LIMIT:
+        case 429:
           // Handle rate limiting
           this.handleRateLimitError(error, context);
           break;
-        case ErrorCategory.VALIDATION:
+        case 422:
           // Handle validation errors
           this.handleValidationError(error, context);
           break;
@@ -385,7 +381,7 @@ class ErrorHandler {
     }
   }
   
-  private handleAuthenticationError(error: PcoError, context: any) {
+  private handleAuthenticationError(error: PcoApiError, context: any) {
     // Log security event
     this.logger.warn('Authentication failure', {
       operation: context.operation,
@@ -399,16 +395,16 @@ class ErrorHandler {
     }
   }
   
-  private handleRateLimitError(error: PcoError, context: any) {
+  private handleRateLimitError(error: PcoApiError, context: any) {
     // Log rate limiting
     this.logger.warn('Rate limit exceeded', {
       operation: context.operation,
       userId: context.userId,
-      retryAfter: error.getRetryDelay()
+      retryAfter: error.getRetryDelay?.() || 'unknown'
     });
   }
   
-  private handleValidationError(error: PcoError, context: any) {
+  private handleValidationError(error: PcoApiError, context: any) {
     // Log validation errors
     this.logger.info('Validation error', {
       operation: context.operation,
@@ -417,13 +413,12 @@ class ErrorHandler {
     });
   }
   
-  private handleGenericError(error: PcoError, context: any) {
+  private handleGenericError(error: PcoApiError, context: any) {
     // Log generic errors
     this.logger.error('Generic API error', {
       operation: context.operation,
       userId: context.userId,
-      category: error.category,
-      severity: error.severity
+      status: error.status
     });
   }
   
@@ -474,8 +469,8 @@ const recovery = new ErrorRecovery();
 
 async function getPersonWithFallback(personId: string) {
   return await recovery.executeWithRecovery(
-    () => getPerson(client, personId, ['emails', 'phone_numbers']),
-    () => getPerson(client, personId), // Fallback without includes
+    () => client.people.getById(personId, ['emails', 'phone_numbers']),
+    () => client.people.getById(personId), // Fallback without includes
     { operation: 'get_person', maxRetries: 3 }
   );
 }
@@ -666,7 +661,7 @@ interface IPeopleService {
 
 class PeopleService implements IPeopleService {
   constructor(
-    private client: PcoClientState,
+    private client: PcoClient,
     private cache: ProductionCache,
     private errorHandler: ErrorHandler
   ) {}
@@ -683,7 +678,7 @@ class PeopleService implements IPeopleService {
         }
         
         // Fetch from API
-        const response = await getPeople(this.client, params);
+        const response = await this.client.people.getAll(params);
         const people = response.data;
         
         // Cache the result
@@ -707,8 +702,7 @@ class PeopleService implements IPeopleService {
         }
         
         // Fetch from API
-        const response = await getPerson(this.client, id, include);
-        const person = response.data!;
+        const person = await this.client.people.getById(id, include);
         
         // Cache the result
         await this.cache.set(cacheKey, person, 10 * 60 * 1000); // 10 minutes
@@ -722,8 +716,7 @@ class PeopleService implements IPeopleService {
   async createPerson(data: CreatePersonData): Promise<PersonResource> {
     return await this.errorHandler.handleApiCall(
       async () => {
-        const response = await createPerson(this.client, data);
-        const person = response.data!;
+        const person = await this.client.people.create(data);
         
         // Invalidate related caches
         await this.cache.invalidatePattern('people:*');
@@ -737,8 +730,7 @@ class PeopleService implements IPeopleService {
   async updatePerson(id: string, data: UpdatePersonData): Promise<PersonResource> {
     return await this.errorHandler.handleApiCall(
       async () => {
-        const response = await updatePerson(this.client, id, data);
-        const person = response.data!;
+        const person = await this.client.people.update(id, data);
         
         // Invalidate related caches
         await this.cache.invalidatePattern(`person:${id}*`);
@@ -753,7 +745,7 @@ class PeopleService implements IPeopleService {
   async deletePerson(id: string): Promise<void> {
     return await this.errorHandler.handleApiCall(
       async () => {
-        await deletePerson(this.client, id);
+        await this.client.people.delete(id);
         
         // Invalidate related caches
         await this.cache.invalidatePattern(`person:${id}*`);
@@ -788,7 +780,12 @@ class Container {
 // Service registration
 const container = new Container();
 
-container.register('pcoClient', () => createProductionClient());
+container.register('pcoClient', () => new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  }
+}));
 container.register('cache', () => new ProductionCache(redisClient));
 container.register('errorHandler', () => new ErrorHandler(logger));
 container.register('peopleService', () => new PeopleService(
@@ -810,7 +807,7 @@ const peopleService = container.get<PeopleService>('peopleService');
 ```typescript
 // Comprehensive unit tests
 describe('PeopleService', () => {
-  let mockClient: jest.Mocked<PcoClientState>;
+  let mockClient: jest.Mocked<PcoClient>;
   let mockCache: jest.Mocked<ProductionCache>;
   let mockErrorHandler: jest.Mocked<ErrorHandler>;
   let peopleService: PeopleService;
@@ -831,13 +828,13 @@ describe('PeopleService', () => {
       
       expect(result).toEqual(cachedPeople);
       expect(mockCache.get).toHaveBeenCalledWith('people:{}');
-      expect(mockClient.getPeople).not.toHaveBeenCalled();
+      expect(mockClient.people.getAll).not.toHaveBeenCalled();
     });
     
     it('should fetch from API when cache miss', async () => {
       const apiResponse = { data: [{ id: '1', attributes: { first_name: 'John' } }] };
       mockCache.get.mockResolvedValue(null);
-      mockClient.getPeople.mockResolvedValue(apiResponse);
+      mockClient.people.getAll.mockResolvedValue(apiResponse);
       
       const result = await peopleService.getPeople();
       
@@ -848,7 +845,7 @@ describe('PeopleService', () => {
     it('should handle errors gracefully', async () => {
       const error = new Error('API Error');
       mockCache.get.mockResolvedValue(null);
-      mockClient.getPeople.mockRejectedValue(error);
+      mockClient.people.getAll.mockRejectedValue(error);
       
       await expect(peopleService.getPeople()).rejects.toThrow('API Error');
       expect(mockErrorHandler.handleApiCall).toHaveBeenCalled();
@@ -862,14 +859,15 @@ describe('PeopleService', () => {
 ```typescript
 // Integration tests with real API
 describe('PeopleService Integration', () => {
-  let client: PcoClientState;
+  let client: PcoClient;
   let peopleService: PeopleService;
   
   beforeAll(() => {
-    client = createPcoClient({
-      appId: process.env.PCO_APP_ID!,
-      appSecret: process.env.PCO_APP_SECRET!,
-      personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
+    client = new PcoClient({
+      auth: {
+        type: 'personal_access_token',
+        personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+      }
     });
     
     peopleService = new PeopleService(
@@ -884,7 +882,7 @@ describe('PeopleService Integration', () => {
     const personData = {
       first_name: 'Test',
       last_name: 'User',
-      email: 'test@example.com'
+      status: 'active'
     };
     
     const createdPerson = await peopleService.createPerson(personData);
@@ -954,7 +952,7 @@ class MetricsCollector {
 // Usage in service
 class InstrumentedPeopleService extends PeopleService {
   constructor(
-    client: PcoClientState,
+    client: PcoClient,
     cache: ProductionCache,
     errorHandler: ErrorHandler,
     private metrics: MetricsCollector
@@ -1073,9 +1071,10 @@ class EnvironmentConfig {
   
   static get pcoConfig() {
     return {
-      appId: process.env.PCO_APP_ID!,
-      appSecret: process.env.PCO_APP_SECRET!,
-      personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
+      auth: {
+        type: 'personal_access_token' as const,
+        personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+      },
       timeout: this.isProduction ? 30000 : 60000,
       rateLimit: {
         maxRequests: this.isProduction ? 90 : 50,
@@ -1133,7 +1132,14 @@ export async function productionHealthCheck(req: Request, res: Response) {
 async function checkPcoApi(): Promise<{ latency: number; status: string }> {
   const start = Date.now();
   try {
-    await getOrganization(client);
+    const client = new PcoClient({
+      auth: {
+        type: 'personal_access_token',
+        personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+      }
+    });
+    
+    await client.organization.get();
     const latency = Date.now() - start;
     return { latency, status: 'healthy' };
   } catch (error) {
@@ -1150,7 +1156,7 @@ async function checkPcoApi(): Promise<{ latency: number; status: string }> {
 // Version management and updates
 class VersionManager {
   static get currentVersion(): string {
-    return process.env.npm_package_version || '1.0.0';
+    return process.env.npm_package_version || '2.0.0';
   }
   
   static async checkForUpdates(): Promise<{ hasUpdate: boolean; latestVersion?: string }> {
@@ -1224,9 +1230,9 @@ For questions about best practices:
 
 1. **Check this guide** for your specific use case
 2. **Review Examples** for real-world implementations
-3. **Check the API Reference** for function details
+3. **Check the API Reference** for method details
 4. **Open an issue** on GitHub for specific questions
 
 ---
 
-*This best practices guide provides comprehensive guidance for production usage. For specific questions or scenarios, please [open an issue](https://github.com/rachelallyson/planning-center-people-ts/issues) with details about your use case.*
+*This best practices guide provides comprehensive guidance for production usage of v2.0.0. For specific questions or scenarios, please [open an issue](https://github.com/rachelallyson/planning-center-people-ts/issues) with details about your use case.*

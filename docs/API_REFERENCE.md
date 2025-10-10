@@ -1,1114 +1,1278 @@
-# API Reference
+# API Reference - v2.0.0
 
-Complete reference for all 40+ functions available in the Planning Center People TypeScript library.
+Complete reference for the Planning Center People TypeScript library v2.0.0 - Class-based API with modular architecture.
 
 ## Table of Contents
 
-1. [Core Functions](#core-functions)
-2. [People Operations](#people-operations)
-3. [Contact Management](#contact-management)
-4. [Field Data Management](#field-data-management)
-5. [Household Management](#household-management)
-6. [List Management](#list-management)
-7. [Note Management](#note-management)
-8. [Workflow Management](#workflow-management)
-9. [Organization Management](#organization-management)
-10. [Error Handling Functions](#error-handling-functions)
-11. [Helper Functions](#helper-functions)
-12. [Performance Functions](#performance-functions)
+1. [PcoClient Class](#pco-client-class)
+2. [People Module](#people-module)
+3. [Fields Module](#fields-module)
+4. [Workflows Module](#workflows-module)
+5. [Contacts Module](#contacts-module)
+6. [Households Module](#households-module)
+7. [Notes Module](#notes-module)
+8. [Lists Module](#lists-module)
+9. [Organization Module](#organization-module)
+10. [PcoClientManager](#pco-client-manager)
+11. [PersonMatcher](#person-matcher)
+12. [Event System](#event-system)
+13. [Type Definitions](#type-definitions)
 
-## Core Functions
+## PcoClient Class
 
-### `createPcoClient(config: PcoClientConfig): PcoClientState`
+The main client class for interacting with the Planning Center People API.
 
-Creates a new PCO client instance with the specified configuration.
+### Constructor
+
+```typescript
+new PcoClient(config: PcoClientConfig)
+```
 
 **Parameters:**
 
 - `config` - Client configuration object
 
-**Returns:** `PcoClientState` - Configured client instance
-
 **Example:**
 
 ```typescript
-import { createPcoClient } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
-const client = createPcoClient({
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
-  personalAccessToken: 'your-token',
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: 'your-token'
+  }
 });
 ```
 
-### `getSingle<T>(client, endpoint, params?, context?): Promise<JsonApiResponse<T>>`
+### Configuration
 
-Makes a GET request for a single resource.
+```typescript
+interface PcoClientConfig {
+  auth: {
+    type: 'personal_access_token' | 'oauth';
+    personalAccessToken?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    onRefresh?: (tokens: TokenResponse) => Promise<void>;
+    onRefreshFailure?: (error: Error) => Promise<void>;
+  };
+  rateLimit?: {
+    maxRequests: number;
+    perMilliseconds: number;
+  };
+  timeout?: number;
+  baseURL?: string;
+}
+```
 
-**Parameters:**
+### Event System
 
-- `client` - PCO client instance
-- `endpoint` - API endpoint path
-- `params` - Optional query parameters
-- `context` - Optional error context
+The client extends EventEmitter and provides comprehensive event monitoring:
 
-**Returns:** `Promise<JsonApiResponse<T>>` - Single resource response
+```typescript
+// Listen to events
+client.on('request:start', (event) => {
+  console.log(`Starting ${event.method} ${event.endpoint}`);
+});
 
-### `getList<T>(client, endpoint, params?, context?): Promise<Paginated<T>>`
+client.on('request:complete', (event) => {
+  console.log(`Completed in ${event.duration}ms`);
+});
 
-Makes a GET request for a list of resources.
+client.on('error', (event) => {
+  console.error('API Error:', event.error.message);
+});
 
-**Parameters:**
+client.on('rate:limit', (event) => {
+  console.log('Rate limit reached:', event.retryAfter);
+});
+```
 
-- `client` - PCO client instance
-- `endpoint` - API endpoint path
-- `params` - Optional query parameters
-- `context` - Optional error context
+### Available Events
 
-**Returns:** `Promise<Paginated<T>>` - Paginated list response
+- `request:start` - Fired when a request starts
+- `request:complete` - Fired when a request completes
+- `error` - Fired when an error occurs
+- `rate:limit` - Fired when rate limit is reached
+- `auth:failure` - Fired when authentication fails
 
-### `post<T>(client, endpoint, data, params?, context?): Promise<JsonApiResponse<T>>`
+## People Module
 
-Makes a POST request to create a resource.
+Access via `client.people`
 
-**Parameters:**
+### Core Operations
 
-- `client` - PCO client instance
-- `endpoint` - API endpoint path
-- `data` - Resource data to create
-- `params` - Optional query parameters
-- `context` - Optional error context
-
-**Returns:** `Promise<JsonApiResponse<T>>` - Created resource response
-
-### `patch<T>(client, endpoint, data, params?, context?): Promise<JsonApiResponse<T>>`
-
-Makes a PATCH request to update a resource.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `endpoint` - API endpoint path
-- `data` - Resource data to update
-- `params` - Optional query parameters
-- `context` - Optional error context
-
-**Returns:** `Promise<JsonApiResponse<T>>` - Updated resource response
-
-### `del(client, endpoint, params?, context?): Promise<void>`
-
-Makes a DELETE request to remove a resource.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `endpoint` - API endpoint path
-- `params` - Optional query parameters
-- `context` - Optional error context
-
-**Returns:** `Promise<void>`
-
-### `getAllPages<T>(client, endpoint, params?, context?): Promise<T[]>`
-
-Automatically fetches all pages of a paginated resource.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `endpoint` - API endpoint path
-- `params` - Optional query parameters
-- `context` - Optional error context
-
-**Returns:** `Promise<T[]>` - Array of all resources from all pages
-
-### `getRateLimitInfo(client): RateLimitInfo`
-
-Gets current rate limit information for the client.
-
-**Parameters:**
-
-- `client` - PCO client instance
-
-**Returns:** `RateLimitInfo` - Current rate limit status
-
-## People Operations
-
-### `getPeople(client, params?, context?): Promise<PeopleList>`
+#### `getAll(params?: GetPeopleParams): Promise<Paginated<PersonResource>>`
 
 Get all people with optional filtering and pagination.
 
 **Parameters:**
 
-- `client` - PCO client instance
 - `params` - Optional parameters:
   - `where` - Filter conditions
   - `include` - Related resources to include
-  - `per_page` - Number of results per page
+  - `perPage` - Number of results per page
   - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<PeopleList>` - List of people
 
 **Example:**
 
 ```typescript
-const people = await getPeople(client, {
-  per_page: 50,
+const people = await client.people.getAll({
+  perPage: 50,
   include: ['emails', 'phone_numbers'],
   where: { first_name: 'John' }
 });
 ```
 
-### `getPerson(client, id, include?, context?): Promise<PersonSingle>`
+#### `getById(id: string, include?: string[]): Promise<PersonResource>`
 
 Get a single person by ID.
 
 **Parameters:**
 
-- `client` - PCO client instance
 - `id` - Person ID
 - `include` - Optional array of related resources to include
-- `context` - Optional error context
-
-**Returns:** `Promise<PersonSingle>` - Single person resource
 
 **Example:**
 
 ```typescript
-const person = await getPerson(client, 'person-id', ['emails', 'phone_numbers']);
+const person = await client.people.getById('person-id', ['emails', 'phone_numbers']);
 ```
 
-### `createPerson(client, data, context?): Promise<PersonSingle>`
+#### `create(data: PersonAttributes): Promise<PersonResource>`
 
 Create a new person.
 
 **Parameters:**
 
-- `client` - PCO client instance
 - `data` - Person data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<PersonSingle>` - Created person resource
 
 **Example:**
 
 ```typescript
-const newPerson = await createPerson(client, {
+const newPerson = await client.people.create({
   first_name: 'John',
   last_name: 'Doe',
-  email: 'john.doe@example.com'
+  status: 'active'
 });
 ```
 
-### `updatePerson(client, id, data, context?): Promise<PersonSingle>`
+#### `update(id: string, data: Partial<PersonAttributes>): Promise<PersonResource>`
 
 Update a person.
 
 **Parameters:**
 
-- `client` - PCO client instance
 - `id` - Person ID
 - `data` - Person data to update
-- `context` - Optional error context
-
-**Returns:** `Promise<PersonSingle>` - Updated person resource
 
 **Example:**
 
 ```typescript
-const updatedPerson = await updatePerson(client, 'person-id', {
+const updatedPerson = await client.people.update('person-id', {
   first_name: 'Jane'
 });
 ```
 
-### `deletePerson(client, id, context?): Promise<void>`
+#### `delete(id: string): Promise<void>`
 
 Delete a person.
 
 **Parameters:**
 
-- `client` - PCO client instance
 - `id` - Person ID
-- `context` - Optional error context
-
-**Returns:** `Promise<void>`
 
 **Example:**
 
 ```typescript
-await deletePerson(client, 'person-id');
+await client.people.delete('person-id');
 ```
 
-## Contact Management
+### Advanced Operations
 
-### Email Management
+#### `createWithContacts(personData: PersonAttributes, contacts: ContactData): Promise<PersonResource>`
 
-#### `getPersonEmails(client, personId, context?): Promise<EmailsList>`
-
-Get all emails for a person.
+Create a person with initial contact information.
 
 **Parameters:**
 
-- `client` - PCO client instance
-- `personId` - Person ID
-- `context` - Optional error context
-
-**Returns:** `Promise<EmailsList>` - List of email resources
-
-#### `createPersonEmail(client, personId, data, context?): Promise<EmailSingle>`
-
-Create an email for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `data` - Email data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<EmailSingle>` - Created email resource
+- `personData` - Person data
+- `contacts` - Contact information (email, phone, address)
 
 **Example:**
 
 ```typescript
-const email = await createPersonEmail(client, 'person-id', {
-  address: 'john.doe@example.com',
-  location: 'work',
-  primary: false
+const person = await client.people.createWithContacts(
+  { first_name: 'John', last_name: 'Doe' },
+  {
+    email: { address: 'john@example.com', primary: true },
+    phone: { number: '+1-555-123-4567', location: 'Mobile' }
+  }
+);
+```
+
+#### `findOrCreate(options: PersonMatchOptions): Promise<PersonResource>`
+
+Find existing person or create new one with smart matching.
+
+**Parameters:**
+
+- `options` - Matching options:
+  - `firstName` - First name
+  - `lastName` - Last name
+  - `email` - Email address (optional)
+  - `matchStrategy` - 'exact' | 'fuzzy' (default: 'fuzzy')
+  - `createIfNotFound` - Whether to create if not found (default: true)
+
+**Example:**
+
+```typescript
+const person = await client.people.findOrCreate({
+  firstName: 'John',
+  lastName: 'Doe',
+  email: 'john@example.com',
+  matchStrategy: 'fuzzy'
 });
 ```
 
-### Phone Number Management
+### Contact Management
 
-#### `getPersonPhoneNumbers(client, personId, context?): Promise<PhoneNumbersList>`
-
-Get all phone numbers for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `context` - Optional error context
-
-**Returns:** `Promise<PhoneNumbersList>` - List of phone number resources
-
-#### `createPersonPhoneNumber(client, personId, data, context?): Promise<PhoneNumberSingle>`
-
-Create a phone number for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `data` - Phone number data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<PhoneNumberSingle>` - Created phone number resource
-
-**Example:**
+#### Email Operations
 
 ```typescript
-const phone = await createPersonPhoneNumber(client, 'person-id', {
-  number: '+1-555-123-4567',
-  location: 'mobile',
+// Get emails
+const emails = await client.people.getEmails(personId);
+
+// Add email
+const email = await client.people.addEmail(personId, {
+  address: 'john@example.com',
+  location: 'Home',
   primary: true
 });
+
+// Update email
+const updatedEmail = await client.people.updateEmail(personId, emailId, {
+  location: 'Work'
+});
+
+// Delete email
+await client.people.deleteEmail(personId, emailId);
 ```
 
-### Address Management
-
-#### `getPersonAddresses(client, personId, context?): Promise<AddressesList>`
-
-Get all addresses for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `context` - Optional error context
-
-**Returns:** `Promise<AddressesList>` - List of address resources
-
-#### `createPersonAddress(client, personId, data, context?): Promise<AddressSingle>`
-
-Create an address for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `data` - Address data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<AddressSingle>` - Created address resource
-
-**Example:**
+#### Phone Operations
 
 ```typescript
-const address = await createPersonAddress(client, 'person-id', {
-  street: '123 Main St',
+// Get phone numbers
+const phones = await client.people.getPhoneNumbers(personId);
+
+// Add phone number
+const phone = await client.people.addPhoneNumber(personId, {
+  number: '+1-555-123-4567',
+  location: 'Mobile',
+  primary: true
+});
+
+// Update phone number
+const updatedPhone = await client.people.updatePhoneNumber(personId, phoneId, {
+  location: 'Work'
+});
+
+// Delete phone number
+await client.people.deletePhoneNumber(personId, phoneId);
+```
+
+#### Address Operations
+
+```typescript
+// Get addresses
+const addresses = await client.people.getAddresses(personId);
+
+// Add address
+const address = await client.people.addAddress(personId, {
+  address1: '123 Main St',
   city: 'Anytown',
   state: 'CA',
   zip: '12345',
-  country: 'US',
-  location: 'home'
+  location: 'Home'
 });
+
+// Update address
+const updatedAddress = await client.people.updateAddress(personId, addressId, {
+  city: 'New City'
+});
+
+// Delete address
+await client.people.deleteAddress(personId, addressId);
 ```
 
-#### `updatePersonAddress(client, personId, addressId, data, context?): Promise<AddressSingle>`
-
-Update an address for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `addressId` - Address ID
-- `data` - Address data to update
-- `context` - Optional error context
-
-**Returns:** `Promise<AddressSingle>` - Updated address resource
-
-### Social Profile Management
-
-#### `getPersonSocialProfiles(client, personId, context?): Promise<SocialProfilesList>`
-
-Get social profiles for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `context` - Optional error context
-
-**Returns:** `Promise<SocialProfilesList>` - List of social profile resources
-
-#### `createPersonSocialProfile(client, personId, data, context?): Promise<SocialProfileSingle>`
-
-Create a social profile for a person.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `data` - Social profile data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<SocialProfileSingle>` - Created social profile resource
-
-**Example:**
+#### Social Profile Operations
 
 ```typescript
-const socialProfile = await createPersonSocialProfile(client, 'person-id', {
+// Get social profiles
+const profiles = await client.people.getSocialProfiles(personId);
+
+// Add social profile
+const profile = await client.people.addSocialProfile(personId, {
   service: 'facebook',
   username: 'johndoe',
   url: 'https://facebook.com/johndoe'
 });
+
+// Delete social profile
+await client.people.deleteSocialProfile(personId, profileId);
 ```
 
-#### `deleteSocialProfile(client, personId, socialProfileId, context?): Promise<void>`
+## Fields Module
 
-Delete a social profile for a person.
+Access via `client.fields`
 
-**Parameters:**
+### Field Definitions
 
-- `client` - PCO client instance
-- `personId` - Person ID
-- `socialProfileId` - Social profile ID
-- `context` - Optional error context
+#### `getFieldDefinitions(params?: GetFieldDefinitionsParams): Promise<Paginated<FieldDefinitionResource>>`
 
-**Returns:** `Promise<void>`
+Get all field definitions.
 
-## Field Data Management
+**Example:**
+
+```typescript
+const fieldDefs = await client.fields.getFieldDefinitions();
+```
+
+#### `getFieldDefinitionById(id: string): Promise<FieldDefinitionResource>`
+
+Get a single field definition.
+
+**Example:**
+
+```typescript
+const fieldDef = await client.fields.getFieldDefinitionById('field-def-id');
+```
+
+#### `createFieldDefinition(data: FieldDefinitionAttributes): Promise<FieldDefinitionResource>`
+
+Create a new field definition.
+
+**Example:**
+
+```typescript
+const fieldDef = await client.fields.createFieldDefinition({
+  name: 'Emergency Contact',
+  field_type: 'text',
+  required: false
+});
+```
+
+#### `updateFieldDefinition(id: string, data: Partial<FieldDefinitionAttributes>): Promise<FieldDefinitionResource>`
+
+Update a field definition.
+
+**Example:**
+
+```typescript
+const updated = await client.fields.updateFieldDefinition('field-def-id', {
+  name: 'Updated Name'
+});
+```
+
+#### `deleteFieldDefinition(id: string): Promise<void>`
+
+Delete a field definition.
+
+**Example:**
+
+```typescript
+await client.fields.deleteFieldDefinition('field-def-id');
+```
 
 ### Field Data Operations
 
-#### `getPersonFieldData(client, personId, context?): Promise<FieldDataList>`
+#### `getPersonFieldData(personId: string): Promise<Paginated<FieldDatumResource>>`
 
-Get field data for a person (custom fields).
+Get field data for a person.
 
-**Parameters:**
+**Example:**
 
-- `client` - PCO client instance
-- `personId` - Person ID
-- `context` - Optional error context
+```typescript
+const fieldData = await client.fields.getPersonFieldData('person-id');
+```
 
-**Returns:** `Promise<FieldDataList>` - List of field data resources
+#### `setPersonFieldById(personId: string, fieldDefinitionId: string, value: any): Promise<FieldDatumResource>`
 
-#### `createPersonFieldData(client, personId, fieldDefinitionId, value, context?): Promise<FieldDataSingle>`
-
-Create field data for a person with smart file upload handling.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `fieldDefinitionId` - Field definition ID
-- `value` - Field value (supports file uploads)
-- `context` - Optional error context
-
-**Returns:** `Promise<FieldDataSingle>` - Created field data resource
+Set field data for a person with smart file upload handling.
 
 **Example:**
 
 ```typescript
 // Text field
-const textField = await createPersonFieldData(
-  client, 
+const textField = await client.fields.setPersonFieldById(
   'person-id', 
   'field-def-id', 
   'Some text value'
 );
 
 // File field (automatically handles file uploads)
-const fileField = await createPersonFieldData(
-  client, 
+const fileField = await client.fields.setPersonFieldById(
   'person-id', 
   'field-def-id', 
   '<a href="https://example.com/document.pdf" download>View File</a>'
 );
 ```
 
-#### `deletePersonFieldData(client, personId, fieldDataId, context?): Promise<void>`
+#### `deletePersonFieldData(personId: string, fieldDataId: string): Promise<void>`
 
 Delete field data for a person.
 
-**Parameters:**
-
-- `client` - PCO client instance
-- `personId` - Person ID
-- `fieldDataId` - Field data ID
-- `context` - Optional error context
-
-**Returns:** `Promise<void>`
-
-### Field Definition Management
-
-#### `getFieldDefinitions(client, params?, context?): Promise<FieldDefinitionsList>`
-
-Get all field definitions.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<FieldDefinitionsList>` - List of field definition resources
-
-#### `getFieldDefinition(client, fieldDefinitionId, context?): Promise<FieldDefinitionSingle>`
-
-Get a single field definition.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `fieldDefinitionId` - Field definition ID
-- `context` - Optional error context
-
-**Returns:** `Promise<FieldDefinitionSingle>` - Single field definition resource
-
-#### `createFieldDefinition(client, data, context?): Promise<FieldDefinitionSingle>`
-
-Create a new field definition.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `data` - Field definition data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<FieldDefinitionSingle>` - Created field definition resource
-
 **Example:**
 
 ```typescript
-const fieldDef = await createFieldDefinition(client, {
-  name: 'Emergency Contact',
-  field_type: 'text',
-  required: false,
-  description: 'Emergency contact information'
-});
+await client.fields.deletePersonFieldData('person-id', 'field-data-id');
 ```
 
-#### `deleteFieldDefinition(client, fieldDefinitionId, context?): Promise<void>`
+### Field Options
 
-Delete a field definition.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `fieldDefinitionId` - Field definition ID
-- `context` - Optional error context
-
-**Returns:** `Promise<void>`
-
-### Field Options Management
-
-#### `getFieldOptions(client, fieldDefinitionId, context?): Promise<FieldOptionsList>`
+#### `getFieldOptions(fieldDefinitionId: string): Promise<Paginated<FieldOptionResource>>`
 
 Get options for a field definition.
 
-**Parameters:**
+**Example:**
 
-- `client` - PCO client instance
-- `fieldDefinitionId` - Field definition ID
-- `context` - Optional error context
+```typescript
+const options = await client.fields.getFieldOptions('field-def-id');
+```
 
-**Returns:** `Promise<FieldOptionsList>` - List of field option resources
-
-#### `createFieldOption(client, fieldDefinitionId, data, context?): Promise<FieldOptionSingle>`
+#### `createFieldOption(fieldDefinitionId: string, data: FieldOptionAttributes): Promise<FieldOptionResource>`
 
 Create a field option.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `fieldDefinitionId` - Field definition ID
-- `data` - Field option data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<FieldOptionSingle>` - Created field option resource
 
 **Example:**
 
 ```typescript
-const option = await createFieldOption(client, 'field-def-id', {
+const option = await client.fields.createFieldOption('field-def-id', {
   value: 'Option 1',
   sequence: 1
 });
 ```
 
-### Tabs Management
+## Workflows Module
 
-#### `getTabs(client, context?): Promise<TabsList>`
+Access via `client.workflows`
 
-Get all tabs.
+### Workflow Operations
 
-**Parameters:**
+#### `getAll(params?: GetWorkflowsParams): Promise<Paginated<WorkflowResource>>`
 
-- `client` - PCO client instance
-- `context` - Optional error context
-
-**Returns:** `Promise<TabsList>` - List of tab resources
-
-## Household Management
-
-### `getHouseholds(client, params?, context?): Promise<HouseholdsList>`
-
-Get all households.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `params` - Optional parameters:
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<HouseholdsList>` - List of household resources
+Get all workflows.
 
 **Example:**
 
 ```typescript
-const households = await getHouseholds(client, {
-  per_page: 25,
-  include: ['people']
+const workflows = await client.workflows.getAll();
+```
+
+#### `getById(id: string): Promise<WorkflowResource>`
+
+Get a single workflow.
+
+**Example:**
+
+```typescript
+const workflow = await client.workflows.getById('workflow-id');
+```
+
+#### `create(data: WorkflowAttributes): Promise<WorkflowResource>`
+
+Create a new workflow.
+
+**Example:**
+
+```typescript
+const workflow = await client.workflows.create({
+  name: 'New Member Follow-up',
+  description: 'Follow up with new members'
 });
 ```
 
-### `getHousehold(client, id, include?, context?): Promise<HouseholdSingle>`
+#### `update(id: string, data: Partial<WorkflowAttributes>): Promise<WorkflowResource>`
 
-Get a single household.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `id` - Household ID
-- `include` - Optional array of related resources to include
-- `context` - Optional error context
-
-**Returns:** `Promise<HouseholdSingle>` - Single household resource
+Update a workflow.
 
 **Example:**
 
 ```typescript
-const household = await getHousehold(client, 'household-id', ['people']);
+const updated = await client.workflows.update('workflow-id', {
+  name: 'Updated Name'
+});
 ```
 
-## List Management
+#### `delete(id: string): Promise<void>`
 
-### `getLists(client, params?, context?): Promise<ListsList>`
-
-Get all lists.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<ListsList>` - List of list resources
-
-### `getListById(client, listId, context?): Promise<ListSingle>`
-
-Get a single list by ID.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `listId` - List ID
-- `context` - Optional error context
-
-**Returns:** `Promise<ListSingle>` - Single list resource
-
-### `getListCategories(client, context?): Promise<ListCategoriesList>`
-
-Get all list categories.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `context` - Optional error context
-
-**Returns:** `Promise<ListCategoriesList>` - List of list category resources
-
-## Note Management
-
-### `getNotes(client, params?, context?): Promise<NotesList>`
-
-Get all notes.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<NotesList>` - List of note resources
-
-### `getNote(client, noteId, params?, context?): Promise<NoteSingle>`
-
-Get a single note.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `noteId` - Note ID
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<NoteSingle>` - Single note resource
-
-### `getNoteCategories(client, context?): Promise<NoteCategoriesList>`
-
-Get all note categories.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `context` - Optional error context
-
-**Returns:** `Promise<NoteCategoriesList>` - List of note category resources
-
-## Workflow Management
-
-### Workflow Cards
-
-#### `getWorkflowCards(client, params?, context?): Promise<WorkflowCardsList>`
-
-Get all workflow cards.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<WorkflowCardsList>` - List of workflow card resources
-
-#### `createWorkflowCard(client, data, context?): Promise<WorkflowCardSingle>`
-
-Create a workflow card.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `data` - Workflow card data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<WorkflowCardSingle>` - Created workflow card resource
+Delete a workflow.
 
 **Example:**
 
 ```typescript
-const workflowCard = await createWorkflowCard(client, {
-  title: 'Follow up with new member',
-  description: 'Call new member to welcome them',
-  workflow_id: 'workflow-id',
-  person_id: 'person-id'
+await client.workflows.delete('workflow-id');
+```
+
+### Workflow Card Operations
+
+#### `getPersonWorkflowCards(personId: string, params?: GetWorkflowCardsParams): Promise<Paginated<WorkflowCardResource>>`
+
+Get workflow cards for a person.
+
+**Example:**
+
+```typescript
+const cards = await client.workflows.getPersonWorkflowCards('person-id');
+```
+
+#### `createWorkflowCard(personId: string, workflowId: string, data: WorkflowCardAttributes): Promise<WorkflowCardResource>`
+
+Create a workflow card for a person.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.createWorkflowCard('person-id', 'workflow-id', {
+  title: 'Follow up call',
+  description: 'Call to discuss membership'
 });
+```
+
+#### `updateWorkflowCard(workflowCardId: string, data: Partial<WorkflowCardAssignableAttributes>, personId?: string): Promise<WorkflowCardResource>`
+
+Update a workflow card.
+
+**Example:**
+
+```typescript
+const updated = await client.workflows.updateWorkflowCard('card-id', {
+  sticky_assignment: true
+}, 'person-id');
+```
+
+#### `deleteWorkflowCard(personId: string, workflowCardId: string): Promise<void>`
+
+Delete a workflow card.
+
+**Example:**
+
+```typescript
+await client.workflows.deleteWorkflowCard('person-id', 'card-id');
+```
+
+### Workflow Card Actions
+
+#### `goBackWorkflowCard(personId: string, workflowCardId: string): Promise<WorkflowCardResource>`
+
+Move workflow card back to previous step.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.goBackWorkflowCard('person-id', 'card-id');
+```
+
+#### `promoteWorkflowCard(personId: string, workflowCardId: string): Promise<WorkflowCardResource>`
+
+Promote workflow card to next step.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.promoteWorkflowCard('person-id', 'card-id');
+```
+
+#### `removeWorkflowCard(personId: string, workflowCardId: string): Promise<WorkflowCardResource>`
+
+Remove workflow card.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.removeWorkflowCard('person-id', 'card-id');
+```
+
+#### `restoreWorkflowCard(personId: string, workflowCardId: string): Promise<WorkflowCardResource>`
+
+Restore removed workflow card.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.restoreWorkflowCard('person-id', 'card-id');
+```
+
+#### `sendEmailWorkflowCard(personId: string, workflowCardId: string, data: WorkflowCardEmailAttributes): Promise<WorkflowCardResource>`
+
+Send email from workflow card.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.sendEmailWorkflowCard('person-id', 'card-id', {
+  subject: 'Follow up',
+  note: 'Thank you for your interest'
+});
+```
+
+#### `skipStepWorkflowCard(personId: string, workflowCardId: string): Promise<WorkflowCardResource>`
+
+Skip current step in workflow.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.skipStepWorkflowCard('person-id', 'card-id');
+```
+
+#### `snoozeWorkflowCard(personId: string, workflowCardId: string, data: WorkflowCardSnoozeAttributes): Promise<WorkflowCardResource>`
+
+Snooze workflow card.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.snoozeWorkflowCard('person-id', 'card-id', {
+  duration: 7 // days
+});
+```
+
+#### `unsnoozeWorkflowCard(personId: string, workflowCardId: string): Promise<WorkflowCardResource>`
+
+Unsnooze workflow card.
+
+**Example:**
+
+```typescript
+const card = await client.workflows.unsnoozeWorkflowCard('person-id', 'card-id');
 ```
 
 ### Workflow Card Notes
 
-#### `getWorkflowCardNotes(client, workflowCardId, context?): Promise<WorkflowCardNotesList>`
+#### `getWorkflowCardNotes(personId: string, workflowCardId: string): Promise<Paginated<WorkflowCardNoteResource>>`
 
 Get notes for a workflow card.
 
-**Parameters:**
+**Example:**
 
-- `client` - PCO client instance
-- `workflowCardId` - Workflow card ID
-- `context` - Optional error context
+```typescript
+const notes = await client.workflows.getWorkflowCardNotes('person-id', 'card-id');
+```
 
-**Returns:** `Promise<WorkflowCardNotesList>` - List of workflow card note resources
-
-#### `createWorkflowCardNote(client, workflowCardId, data, context?): Promise<WorkflowCardNoteSingle>`
+#### `createWorkflowCardNote(personId: string, workflowCardId: string, data: WorkflowCardNoteAttributes): Promise<WorkflowCardNoteResource>`
 
 Create a note for a workflow card.
 
-**Parameters:**
-
-- `client` - PCO client instance
-- `workflowCardId` - Workflow card ID
-- `data` - Note data to create
-- `context` - Optional error context
-
-**Returns:** `Promise<WorkflowCardNoteSingle>` - Created workflow card note resource
-
 **Example:**
 
 ```typescript
-const note = await createWorkflowCardNote(client, 'workflow-card-id', {
-  content: 'Called and left voicemail. Will try again tomorrow.'
+const note = await client.workflows.createWorkflowCardNote('person-id', 'card-id', {
+  note: 'Called and left voicemail'
 });
 ```
 
-### Workflows
+## Contacts Module
 
-#### `getWorkflows(client, params?, context?): Promise<WorkflowsList>`
+Access via `client.contacts`
 
-Get all workflows.
+### Email Management
 
-**Parameters:**
+```typescript
+// Get all emails
+const emails = await client.contacts.getEmails();
 
-- `client` - PCO client instance
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
+// Get emails for person
+const personEmails = await client.contacts.getEmailsForPerson('person-id');
 
-**Returns:** `Promise<WorkflowsList>` - List of workflow resources
+// Create email
+const email = await client.contacts.createEmail('person-id', {
+  address: 'john@example.com',
+  location: 'Home',
+  primary: true
+});
 
-#### `getWorkflow(client, workflowId, params?, context?): Promise<WorkflowSingle>`
+// Update email
+const updated = await client.contacts.updateEmail('person-id', 'email-id', {
+  location: 'Work'
+});
 
-Get a single workflow.
+// Delete email
+await client.contacts.deleteEmail('person-id', 'email-id');
+```
 
-**Parameters:**
+### Phone Management
 
-- `client` - PCO client instance
-- `workflowId` - Workflow ID
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
+```typescript
+// Get all phone numbers
+const phones = await client.contacts.getPhoneNumbers();
 
-**Returns:** `Promise<WorkflowSingle>` - Single workflow resource
+// Get phone numbers for person
+const personPhones = await client.contacts.getPhoneNumbersForPerson('person-id');
 
-## Organization Management
+// Create phone number
+const phone = await client.contacts.createPhoneNumber('person-id', {
+  number: '+1-555-123-4567',
+  location: 'Mobile',
+  primary: true
+});
 
-### `getOrganization(client, params?, context?): Promise<OrganizationSingle>`
+// Update phone number
+const updated = await client.contacts.updatePhoneNumber('person-id', 'phone-id', {
+  location: 'Work'
+});
+
+// Delete phone number
+await client.contacts.deletePhoneNumber('person-id', 'phone-id');
+```
+
+### Address Management
+
+```typescript
+// Get all addresses
+const addresses = await client.contacts.getAddresses();
+
+// Get addresses for person
+const personAddresses = await client.contacts.getAddressesForPerson('person-id');
+
+// Create address
+const address = await client.contacts.createAddress('person-id', {
+  address1: '123 Main St',
+  city: 'Anytown',
+  state: 'CA',
+  zip: '12345',
+  location: 'Home'
+});
+
+// Update address
+const updated = await client.contacts.updateAddress('person-id', 'address-id', {
+  city: 'New City'
+});
+
+// Delete address
+await client.contacts.deleteAddress('person-id', 'address-id');
+```
+
+### Social Profile Management
+
+```typescript
+// Get all social profiles
+const profiles = await client.contacts.getSocialProfiles();
+
+// Get social profiles for person
+const personProfiles = await client.contacts.getSocialProfilesForPerson('person-id');
+
+// Create social profile
+const profile = await client.contacts.createSocialProfile('person-id', {
+  service: 'facebook',
+  username: 'johndoe',
+  url: 'https://facebook.com/johndoe'
+});
+
+// Delete social profile
+await client.contacts.deleteSocialProfile('person-id', 'profile-id');
+```
+
+## Households Module
+
+Access via `client.households`
+
+### Household Operations
+
+#### `getAll(params?: GetHouseholdsParams): Promise<Paginated<HouseholdResource>>`
+
+Get all households.
+
+**Example:**
+
+```typescript
+const households = await client.households.getAll({
+  include: ['people']
+});
+```
+
+#### `getById(id: string, include?: string[]): Promise<HouseholdResource>`
+
+Get a single household.
+
+**Example:**
+
+```typescript
+const household = await client.households.getById('household-id', ['people']);
+```
+
+#### `create(data: HouseholdAttributes): Promise<HouseholdResource>`
+
+Create a new household.
+
+**Example:**
+
+```typescript
+const household = await client.households.create({
+  name: 'Smith Family'
+});
+```
+
+#### `update(id: string, data: Partial<HouseholdAttributes>): Promise<HouseholdResource>`
+
+Update a household.
+
+**Example:**
+
+```typescript
+const updated = await client.households.update('household-id', {
+  name: 'Updated Name'
+});
+```
+
+#### `delete(id: string): Promise<void>`
+
+Delete a household.
+
+**Example:**
+
+```typescript
+await client.households.delete('household-id');
+```
+
+### Household Membership
+
+#### `addPersonToHousehold(householdId: string, personId: string): Promise<void>`
+
+Add a person to a household.
+
+**Example:**
+
+```typescript
+await client.households.addPersonToHousehold('household-id', 'person-id');
+```
+
+#### `removePersonFromHousehold(householdId: string, personId: string): Promise<void>`
+
+Remove a person from a household.
+
+**Example:**
+
+```typescript
+await client.households.removePersonFromHousehold('household-id', 'person-id');
+```
+
+## Notes Module
+
+Access via `client.notes`
+
+### Note Operations
+
+#### `getAll(params?: GetNotesParams): Promise<Paginated<NoteResource>>`
+
+Get all notes.
+
+**Example:**
+
+```typescript
+const notes = await client.notes.getAll({
+  where: { person_id: 'person-id' }
+});
+```
+
+#### `getById(id: string): Promise<NoteResource>`
+
+Get a single note.
+
+**Example:**
+
+```typescript
+const note = await client.notes.getById('note-id');
+```
+
+#### `create(data: NoteAttributes): Promise<NoteResource>`
+
+Create a new note.
+
+**Example:**
+
+```typescript
+const note = await client.notes.create({
+  content: 'This is a note',
+  person_id: 'person-id',
+  category_id: 'category-id'
+});
+```
+
+#### `update(id: string, data: Partial<NoteAttributes>): Promise<NoteResource>`
+
+Update a note.
+
+**Example:**
+
+```typescript
+const updated = await client.notes.update('note-id', {
+  content: 'Updated content'
+});
+```
+
+#### `delete(id: string): Promise<void>`
+
+Delete a note.
+
+**Example:**
+
+```typescript
+await client.notes.delete('note-id');
+```
+
+### Note Categories
+
+#### `getNoteCategories(): Promise<Paginated<NoteCategoryResource>>`
+
+Get all note categories.
+
+**Example:**
+
+```typescript
+const categories = await client.notes.getNoteCategories();
+```
+
+#### `createNoteCategory(data: NoteCategoryAttributes): Promise<NoteCategoryResource>`
+
+Create a new note category.
+
+**Example:**
+
+```typescript
+const category = await client.notes.createNoteCategory({
+  name: 'Follow-up',
+  color: '#FF0000'
+});
+```
+
+#### `updateNoteCategory(id: string, data: Partial<NoteCategoryAttributes>): Promise<NoteCategoryResource>`
+
+Update a note category.
+
+**Example:**
+
+```typescript
+const updated = await client.notes.updateNoteCategory('category-id', {
+  name: 'Updated Name'
+});
+```
+
+#### `deleteNoteCategory(id: string): Promise<void>`
+
+Delete a note category.
+
+**Example:**
+
+```typescript
+await client.notes.deleteNoteCategory('category-id');
+```
+
+## Lists Module
+
+Access via `client.lists`
+
+### List Operations
+
+#### `getAll(params?: GetListsParams): Promise<Paginated<ListResource>>`
+
+Get all lists.
+
+**Example:**
+
+```typescript
+const lists = await client.lists.getAll();
+```
+
+#### `getById(id: string): Promise<ListResource>`
+
+Get a single list.
+
+**Example:**
+
+```typescript
+const list = await client.lists.getById('list-id');
+```
+
+#### `getPeople(listId: string, params?: GetListPeopleParams): Promise<Paginated<PersonResource>>`
+
+Get people in a list.
+
+**Example:**
+
+```typescript
+const people = await client.lists.getPeople('list-id');
+```
+
+### List Categories
+
+#### `getListCategories(): Promise<Paginated<ListCategoryResource>>`
+
+Get all list categories.
+
+**Example:**
+
+```typescript
+const categories = await client.lists.getListCategories();
+```
+
+#### `getListCategoryById(id: string): Promise<ListCategoryResource>`
+
+Get a single list category.
+
+**Example:**
+
+```typescript
+const category = await client.lists.getListCategoryById('category-id');
+```
+
+#### `createListCategory(data: ListCategoryAttributes): Promise<ListCategoryResource>`
+
+Create a new list category.
+
+**Example:**
+
+```typescript
+const category = await client.lists.createListCategory({
+  name: 'New Category'
+});
+```
+
+#### `updateListCategory(id: string, data: Partial<ListCategoryAttributes>): Promise<ListCategoryResource>`
+
+Update a list category.
+
+**Example:**
+
+```typescript
+const updated = await client.lists.updateListCategory('category-id', {
+  name: 'Updated Name'
+});
+```
+
+#### `deleteListCategory(id: string): Promise<void>`
+
+Delete a list category.
+
+**Example:**
+
+```typescript
+await client.lists.deleteListCategory('category-id');
+```
+
+## Organization Module
+
+Access via `client.organization`
+
+### Organization Operations
+
+#### `get(): Promise<OrganizationResource>`
 
 Get organization information.
 
-**Parameters:**
-
-- `client` - PCO client instance
-- `params` - Optional parameters:
-  - `where` - Filter conditions
-  - `include` - Related resources to include
-  - `per_page` - Number of results per page
-  - `page` - Page number
-- `context` - Optional error context
-
-**Returns:** `Promise<OrganizationSingle>` - Organization resource
-
 **Example:**
 
 ```typescript
-const organization = await getOrganization(client);
-console.log(organization.data?.attributes?.name);
+const org = await client.organization.get();
+console.log(org.attributes?.name);
 ```
 
-## Error Handling Functions
+## PcoClientManager
 
-### `retryWithBackoff<T>(operation, config): Promise<T>`
+Automatic client caching and lifecycle management.
 
-Retry an operation with exponential backoff.
-
-**Parameters:**
-
-- `operation` - Function to retry
-- `config` - Retry configuration:
-  - `maxRetries` - Maximum number of retries
-  - `baseDelay` - Base delay in milliseconds
-  - `maxDelay` - Maximum delay in milliseconds
-  - `context` - Error context
-  - `onRetry` - Retry callback function
-
-**Returns:** `Promise<T>` - Result of the operation
-
-**Example:**
+### Usage
 
 ```typescript
-const result = await retryWithBackoff(
-  () => getPerson(client, 'person-id'),
-  {
-    maxRetries: 3,
-    baseDelay: 1000,
-    context: { endpoint: '/people/person-id', method: 'GET' }
+import { PcoClientManager } from '@rachelallyson/planning-center-people-ts';
+
+const manager = new PcoClientManager();
+
+// Get or create client
+const client = await manager.getClient('user-id', {
+  auth: {
+    type: 'oauth',
+    accessToken: 'token',
+    refreshToken: 'refresh-token'
   }
-);
+});
+
+// Cleanup
+await manager.cleanup();
 ```
 
-### `withErrorBoundary<T>(operation, context): Promise<T>`
+### Methods
 
-Wrap an operation with error boundary handling.
+#### `getClient(userId: string, config: PcoClientConfig): Promise<PcoClient>`
 
-**Parameters:**
+Get or create a client for a user.
 
-- `operation` - Function to execute
-- `context` - Error context
+#### `cleanup(): Promise<void>`
 
-**Returns:** `Promise<T>` - Result of the operation
+Clean up expired clients.
 
-**Example:**
+## PersonMatcher
+
+Smart person matching with fuzzy logic.
+
+### Usage
 
 ```typescript
-const result = await withErrorBoundary(
-  () => createPerson(client, personData),
-  {
-    endpoint: '/people',
-    method: 'POST',
-    metadata: { operation: 'create_person' }
-  }
-);
+import { PersonMatcher } from '@rachelallyson/planning-center-people-ts';
+
+const matcher = new PersonMatcher(client);
+
+// Find existing person
+const match = await matcher.findMatch({
+  firstName: 'John',
+  lastName: 'Doe',
+  email: 'john@example.com',
+  matchStrategy: 'fuzzy'
+});
+
+// Find or create
+const person = await matcher.findOrCreate({
+  firstName: 'John',
+  lastName: 'Doe',
+  createIfNotFound: true
+});
 ```
 
-### `classifyError(error): ErrorCategory`
-
-Classify an error into a category.
-
-**Parameters:**
-
-- `error` - Error to classify
-
-**Returns:** `ErrorCategory` - Error category
-
-### `shouldNotRetry(error): boolean`
-
-Determine if an error should not be retried.
-
-**Parameters:**
-
-- `error` - Error to check
-
-**Returns:** `boolean` - Whether the error should not be retried
-
-## Helper Functions
-
-### `buildQueryParams(params): Record<string, string>`
-
-Build query parameters for API requests.
-
-**Parameters:**
-
-- `params` - Parameters object
-
-**Returns:** `Record<string, string>` - Formatted query parameters
-
-### `formatPersonName(person): string`
-
-Format a person's name from their attributes.
-
-**Parameters:**
-
-- `person` - Person resource
-
-**Returns:** `string` - Formatted name
-
-### `getPrimaryContact(person): ContactInfo | null`
-
-Get primary contact information for a person.
-
-**Parameters:**
-
-- `person` - Person resource
-
-**Returns:** `ContactInfo | null` - Primary contact information
-
-### `isValidEmail(email): boolean`
-
-Validate an email address.
-
-**Parameters:**
-
-- `email` - Email address to validate
-
-**Returns:** `boolean` - Whether the email is valid
-
-### `isValidPhone(phone): boolean`
-
-Validate a phone number.
-
-**Parameters:**
-
-- `phone` - Phone number to validate
-
-**Returns:** `boolean` - Whether the phone number is valid
-
-### File Upload Helpers
-
-#### `isFileUpload(value): boolean`
-
-Check if a value is a file upload.
-
-**Parameters:**
-
-- `value` - Value to check
-
-**Returns:** `boolean` - Whether the value is a file upload
-
-#### `extractFileUrl(value): string | null`
-
-Extract file URL from HTML or plain text.
-
-**Parameters:**
-
-- `value` - Value to extract URL from
-
-**Returns:** `string | null` - Extracted file URL
-
-#### `processFileValue(value, fieldType): string | FileUploadData`
-
-Process a file value for different field types.
-
-**Parameters:**
-
-- `value` - File value to process
-- `fieldType` - Type of field ('text' or 'file')
-
-**Returns:** `string | FileUploadData` - Processed value
-
-## Performance Functions
-
-### `batchFetchPersonDetails(client, personIds, options?): Promise<PersonResource[]>`
-
-Fetch multiple person details in batches.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `personIds` - Array of person IDs
-- `options` - Optional batch options
-
-**Returns:** `Promise<PersonResource[]>` - Array of person resources
-
-### `processInBatches<T>(items, batchSize, processor): Promise<T[]>`
-
-Process items in batches.
-
-**Parameters:**
-
-- `items` - Array of items to process
-- `batchSize` - Size of each batch
-- `processor` - Function to process each batch
-
-**Returns:** `Promise<T[]>` - Array of processed results
-
-### `streamPeopleData(client, options?): AsyncGenerator<PersonResource>`
-
-Stream people data for large datasets.
-
-**Parameters:**
-
-- `client` - PCO client instance
-- `options` - Optional streaming options
-
-**Returns:** `AsyncGenerator<PersonResource>` - Generator of person resources
-
-### `monitorPerformance<T>(operation, context?): Promise<T>`
-
-Monitor the performance of an operation.
-
-**Parameters:**
-
-- `operation` - Function to monitor
-- `context` - Optional performance context
-
-**Returns:** `Promise<T>` - Result of the operation
+### Methods
+
+#### `findMatch(options: PersonMatchOptions): Promise<PersonMatchResult | null>`
+
+Find existing person with matching logic.
+
+#### `findOrCreate(options: PersonMatchOptions): Promise<PersonResource>`
+
+Find existing person or create new one.
+
+## Event System
+
+The client provides comprehensive event monitoring for debugging and monitoring.
+
+### Event Types
+
+```typescript
+// Request events
+client.on('request:start', (event: RequestStartEvent) => {
+  console.log(`Starting ${event.method} ${event.endpoint}`);
+});
+
+client.on('request:complete', (event: RequestCompleteEvent) => {
+  console.log(`Completed in ${event.duration}ms`);
+});
+
+// Error events
+client.on('error', (event: ErrorEvent) => {
+  console.error('API Error:', event.error.message);
+});
+
+// Rate limit events
+client.on('rate:limit', (event: RateLimitEvent) => {
+  console.log('Rate limit reached, retry after:', event.retryAfter);
+});
+
+// Authentication events
+client.on('auth:failure', (event: AuthFailureEvent) => {
+  console.error('Authentication failed:', event.error.message);
+});
+```
+
+### Event Interfaces
+
+```typescript
+interface RequestStartEvent {
+  method: string;
+  endpoint: string;
+  timestamp: Date;
+}
+
+interface RequestCompleteEvent {
+  method: string;
+  endpoint: string;
+  duration: number;
+  status: number;
+  timestamp: Date;
+}
+
+interface ErrorEvent {
+  error: Error;
+  method: string;
+  endpoint: string;
+  timestamp: Date;
+}
+
+interface RateLimitEvent {
+  retryAfter: number;
+  limit: number;
+  remaining: number;
+  resetTime: Date;
+}
+
+interface AuthFailureEvent {
+  error: Error;
+  timestamp: Date;
+}
+```
 
 ## Type Definitions
 
-### Common Types
+### Core Types
 
 ```typescript
 // Client configuration
 interface PcoClientConfig {
-  appId?: string;
-  appSecret?: string;
+  auth: {
+    type: 'personal_access_token' | 'oauth';
   personalAccessToken?: string;
   accessToken?: string;
   refreshToken?: string;
-  baseURL?: string;
+    onRefresh?: (tokens: TokenResponse) => Promise<void>;
+    onRefreshFailure?: (error: Error) => Promise<void>;
+  };
+  rateLimit?: {
+    maxRequests: number;
+    perMilliseconds: number;
+  };
   timeout?: number;
-  rateLimit?: RateLimitConfig;
-  retry?: RetryConfig;
-  headers?: Record<string, string>;
-  onTokenRefresh?: (tokens: TokenResponse) => Promise<void>;
-  onTokenRefreshFailure?: (error: Error, context: ErrorContext) => Promise<void>;
+  baseURL?: string;
 }
 
-// Error context
-interface ErrorContext {
-  endpoint: string;
-  method: string;
-  personId?: string;
-  metadata?: Record<string, any>;
+// Token response
+interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
 }
 
-// Rate limit info
-interface RateLimitInfo {
-  requestsUsed: number;
-  requestsRemaining: number;
-  windowResetsIn: number;
-  windowResetsAt: Date;
+// Pagination
+interface Paginated<T> {
+  data: T[];
+  meta: {
+    count: number;
+    total_count: number;
+    next?: string;
+    prev?: string;
+  };
+}
+
+// Person matching
+interface PersonMatchOptions {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  matchStrategy?: 'exact' | 'fuzzy';
+  createIfNotFound?: boolean;
+}
+
+interface PersonMatchResult {
+  person: PersonResource;
+  confidence: number;
+  matchType: 'exact' | 'fuzzy';
 }
 ```
 
@@ -1127,159 +1291,28 @@ interface PersonResource {
 interface PersonAttributes {
   first_name: string;
   last_name: string;
-  email?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
   // ... other attributes
 }
-```
 
-## Usage Examples
-
-### Basic CRUD Operations
-
-```typescript
-import { 
-  createPcoClient, 
-  getPeople, 
-  getPerson, 
-  createPerson, 
-  updatePerson, 
-  deletePerson 
-} from '@rachelallyson/planning-center-people-ts';
-
-const client = createPcoClient({
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
-  personalAccessToken: 'your-token'
-});
-
-// Get all people
-const people = await getPeople(client, { per_page: 50 });
-
-// Get specific person
-const person = await getPerson(client, 'person-id');
-
-// Create person
-const newPerson = await createPerson(client, {
-  first_name: 'John',
-  last_name: 'Doe',
-  email: 'john@example.com'
-});
-
-// Update person
-const updatedPerson = await updatePerson(client, 'person-id', {
-  first_name: 'Jane'
-});
-
-// Delete person
-await deletePerson(client, 'person-id');
-```
-
-### Contact Management
-
-```typescript
-import { 
-  getPersonEmails, 
-  createPersonEmail,
-  getPersonPhoneNumbers,
-  createPersonPhoneNumber 
-} from '@rachelallyson/planning-center-people-ts';
-
-// Get person's emails
-const emails = await getPersonEmails(client, 'person-id');
-
-// Add email
-const email = await createPersonEmail(client, 'person-id', {
-  address: 'john.doe@example.com',
-  location: 'work',
-  primary: false
-});
-
-// Get person's phone numbers
-const phones = await getPersonPhoneNumbers(client, 'person-id');
-
-// Add phone number
-const phone = await createPersonPhoneNumber(client, 'person-id', {
-  number: '+1-555-123-4567',
-  location: 'mobile',
-  primary: true
-});
-```
-
-### Custom Fields
-
-```typescript
-import { 
-  getFieldDefinitions,
-  createPersonFieldData,
-  getPersonFieldData 
-} from '@rachelallyson/planning-center-people-ts';
-
-// Get field definitions
-const fieldDefs = await getFieldDefinitions(client);
-
-// Create field data (with smart file upload handling)
-const fieldData = await createPersonFieldData(
-  client, 
-  'person-id', 
-  'field-def-id', 
-  '<a href="https://example.com/document.pdf" download>View File</a>'
-);
-
-// Get person's field data
-const personFieldData = await getPersonFieldData(client, 'person-id');
-```
-
-### Error Handling
-
-```typescript
-import { 
-  PcoError, 
-  ErrorCategory, 
-  retryWithBackoff,
-  withErrorBoundary 
-} from '@rachelallyson/planning-center-people-ts';
-
-try {
-  const people = await getPeople(client);
-} catch (error) {
-  if (error instanceof PcoError) {
-    console.error('PCO Error:', {
-      message: error.message,
-      category: error.category,
-      severity: error.severity,
-      retryable: error.retryable
-    });
-  }
+interface PersonRelationships {
+  emails?: Relationship;
+  phone_numbers?: Relationship;
+  addresses?: Relationship;
+  household?: Relationship;
+  // ... other relationships
 }
-
-// With retry logic
-const result = await retryWithBackoff(
-  () => getPerson(client, 'person-id'),
-  {
-    maxRetries: 3,
-    baseDelay: 1000,
-    context: { endpoint: '/people/person-id', method: 'GET' }
-  }
-);
-
-// With error boundary
-const result = await withErrorBoundary(
-  () => createPerson(client, personData),
-  {
-    endpoint: '/people',
-    method: 'POST',
-    metadata: { operation: 'create_person' }
-  }
-);
 ```
 
 ## Next Steps
 
-- 💡 **[Examples](./EXAMPLES.md)** - See real-world usage patterns
-- 🛠️ **[Error Handling](./ERROR_HANDLING.md)** - Advanced error management
-- ⚡ **[Performance Guide](./PERFORMANCE.md)** - Optimization techniques
-- 🔧 **[Troubleshooting](./TROUBLESHOOTING.md)** - Common issues and solutions
+- 💡 **[API Usage Guide](./API_USAGE_GUIDE.md)** - Comprehensive usage patterns
+- 🔐 **[Authentication Guide](./AUTHENTICATION.md)** - Authentication setup
+- 🛠️ **[Best Practices](./BEST_PRACTICES.md)** - Production best practices
+- 📚 **[Examples](./EXAMPLES.md)** - Real-world examples
 
 ---
 
-*This API reference covers all 40+ functions available in the library. For more detailed examples and patterns, see the [Examples Guide](./EXAMPLES.md).*
+*This API reference covers the complete v2.0.0 class-based API. For migration from v1.x, see the [Migration Guide](./MIGRATION_V2.md).*

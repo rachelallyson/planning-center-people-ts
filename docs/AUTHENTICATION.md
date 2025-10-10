@@ -1,6 +1,6 @@
-# Authentication Guide
+# Authentication Guide - v2.0.0
 
-This guide covers all authentication methods supported by the Planning Center People TypeScript library, including setup, token management, and best practices.
+This guide covers all authentication methods supported by the Planning Center People TypeScript library v2.0.0, including setup, token management, and best practices.
 
 ## Authentication Methods Overview
 
@@ -8,10 +8,10 @@ The library supports two main authentication methods:
 
 | Method | Use Case | Token Type | Refresh Support | Multi-User |
 |--------|----------|------------|-----------------|------------|
-| **App Credentials** | Server applications, single-user apps | Personal Access Token | ❌ | ❌ |
+| **Personal Access Token** | Server applications, single-user apps | Personal Access Token | ❌ | ❌ |
 | **OAuth 2.0** | Multi-user applications, web apps | Access Token + Refresh Token | ✅ | ✅ |
 
-## 1. App Credentials Authentication
+## 1. Personal Access Token Authentication
 
 ### When to Use
 
@@ -44,12 +44,13 @@ The library supports two main authentication methods:
 #### Step 3: Configure Your Application
 
 ```typescript
-import { createPcoClient } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
-const client = createPcoClient({
-  personalAccessToken: 'your-personal-access-token-here',
-  appId: 'your-app-id',
-  appSecret: 'your-app-secret',
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: 'your-personal-access-token-here'
+  }
 });
 ```
 
@@ -57,17 +58,16 @@ const client = createPcoClient({
 
 ```env
 # .env
-PCO_APP_ID=your_app_id_here
-PCO_APP_SECRET=your_app_secret_here
 PCO_PERSONAL_ACCESS_TOKEN=your_personal_access_token_here
 ```
 
 ```typescript
 // Using environment variables
-const client = createPcoClient({
-  personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
-  appId: process.env.PCO_APP_ID!,
-  appSecret: process.env.PCO_APP_SECRET!,
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  }
 });
 ```
 
@@ -75,19 +75,20 @@ const client = createPcoClient({
 
 ```typescript
 // src/pco-client.ts
-import { createPcoClient } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
-export const pcoClient = createPcoClient({
-  personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
-  appId: process.env.PCO_APP_ID!,
-  appSecret: process.env.PCO_APP_SECRET!,
+export const pcoClient = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  },
   
   // Optional: Custom configuration
   timeout: 30000,
   rateLimit: {
-    maxRequests: 100,
-    perMilliseconds: 60000,
-  },
+    maxRequests: 90,
+    perMilliseconds: 60000
+  }
 });
 ```
 
@@ -153,7 +154,7 @@ grant_type=authorization_code
 ```typescript
 // src/auth/oauth.ts
 import express from 'express';
-import { createPcoClient } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
 const router = express.Router();
 
@@ -198,18 +199,19 @@ router.get('/auth/pco/callback', async (req, res) => {
     await saveUserTokens(req.session.userId, tokens);
     
     // Create PCO client
-    const client = createPcoClient({
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      appId: process.env.PCO_APP_ID!,
-      appSecret: process.env.PCO_APP_SECRET!,
-      onTokenRefresh: async (newTokens) => {
-        await saveUserTokens(req.session.userId, newTokens);
-      },
-      onTokenRefreshFailure: async (error, context) => {
-        console.error('Token refresh failed:', error.message);
-        await clearUserTokens(req.session.userId);
-      },
+    const client = new PcoClient({
+      auth: {
+        type: 'oauth',
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        onRefresh: async (newTokens) => {
+          await saveUserTokens(req.session.userId, newTokens);
+        },
+        onRefreshFailure: async (error) => {
+          console.error('Token refresh failed:', error.message);
+          await clearUserTokens(req.session.userId);
+        }
+      }
     });
     
     res.json({ success: true, message: 'Connected to Planning Center!' });
@@ -227,7 +229,7 @@ export default router;
 ```typescript
 // pages/api/auth/pco.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createPcoClient } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -323,29 +325,30 @@ export const tokenManager = new TokenManager();
 
 ```typescript
 // src/services/pco-client-factory.ts
-import { createPcoClient, type PcoClientState } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 import { tokenManager } from './token-manager';
 
-export async function createUserPcoClient(userId: string): Promise<PcoClientState> {
+export async function createUserPcoClient(userId: string): Promise<PcoClient> {
   const tokens = await tokenManager.getTokens(userId);
   
   if (!tokens) {
     throw new Error('User not authenticated with Planning Center');
   }
   
-  return createPcoClient({
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    appId: process.env.PCO_APP_ID!,
-    appSecret: process.env.PCO_APP_SECRET!,
-    onTokenRefresh: async (newTokens) => {
-      await tokenManager.saveTokens(userId, newTokens);
-    },
-    onTokenRefreshFailure: async (error, context) => {
-      console.error('Token refresh failed for user:', userId, error.message);
-      await tokenManager.clearTokens(userId);
-      // Redirect user to re-authenticate
-    },
+  return new PcoClient({
+    auth: {
+      type: 'oauth',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      onRefresh: async (newTokens) => {
+        await tokenManager.saveTokens(userId, newTokens);
+      },
+      onRefreshFailure: async (error) => {
+        console.error('Token refresh failed for user:', userId, error.message);
+        await tokenManager.clearTokens(userId);
+        // Redirect user to re-authenticate
+      }
+    }
   });
 }
 ```
@@ -357,53 +360,49 @@ export async function createUserPcoClient(userId: string): Promise<PcoClientStat
 The library automatically handles token refresh when using OAuth 2.0:
 
 ```typescript
-const client = createPcoClient({
-  accessToken: userAccessToken,
-  refreshToken: userRefreshToken,
-  appId: process.env.PCO_APP_ID!,
-  appSecret: process.env.PCO_APP_SECRET!,
-  
-  // Called when tokens are successfully refreshed
-  onTokenRefresh: async (newTokens) => {
-    console.log('Tokens refreshed successfully');
-    await saveTokensToDatabase(userId, newTokens);
-  },
-  
-  // Called when token refresh fails
-  onTokenRefreshFailure: async (error, context) => {
-    console.error('Token refresh failed:', error.message);
+const client = new PcoClient({
+  auth: {
+    type: 'oauth',
+    accessToken: userAccessToken,
+    refreshToken: userRefreshToken,
     
-    if (error.message.includes('invalid_grant')) {
-      // Refresh token is invalid - user needs to re-authenticate
-      await clearUserTokens(userId);
-      redirectToLogin();
-    } else if (error.message.includes('Network error')) {
-      // Network issue - could retry later
-      showNetworkErrorToast();
+    // Called when tokens are successfully refreshed
+    onRefresh: async (newTokens) => {
+      console.log('Tokens refreshed successfully');
+      await saveTokensToDatabase(userId, newTokens);
+    },
+    
+    // Called when token refresh fails
+    onRefreshFailure: async (error) => {
+      console.error('Token refresh failed:', error.message);
+      
+      if (error.message.includes('invalid_grant')) {
+        // Refresh token is invalid - user needs to re-authenticate
+        await clearUserTokens(userId);
+        redirectToLogin();
+      } else if (error.message.includes('Network error')) {
+        // Network issue - could retry later
+        showNetworkErrorToast();
+      }
     }
-  },
+  }
 });
 ```
 
 ### Manual Token Refresh
 
 ```typescript
-import { refreshAccessToken, updateClientTokens } from '@rachelallyson/planning-center-people-ts';
+// The library handles token refresh automatically
+// But you can also implement manual refresh if needed
 
-// Manually refresh tokens
-async function refreshUserTokens(client: PcoClientState, refreshToken: string) {
+async function refreshUserTokens(client: PcoClient, refreshToken: string) {
   try {
-    const newTokens = await refreshAccessToken(client, refreshToken);
-    
-    // Update client with new tokens
-    updateClientTokens(client, newTokens);
-    
-    // Save to database
-    await saveTokensToDatabase(userId, newTokens);
-    
-    return newTokens;
+    // The client will automatically refresh tokens when they expire
+    // You don't need to manually call refresh endpoints
+    const people = await client.people.getAll();
+    return people;
   } catch (error) {
-    console.error('Manual token refresh failed:', error);
+    console.error('Token refresh failed:', error);
     throw error;
   }
 }
@@ -415,30 +414,17 @@ async function refreshUserTokens(client: PcoClientState, refreshToken: string) {
 // src/middleware/token-refresh.ts
 export async function withTokenRefresh<T>(
   userId: string,
-  operation: (client: PcoClientState) => Promise<T>
+  operation: (client: PcoClient) => Promise<T>
 ): Promise<T> {
   let client = await createUserPcoClient(userId);
   
   try {
     return await operation(client);
   } catch (error) {
-    if (error instanceof PcoError && error.status === 401) {
-      // Token might be expired, try to refresh
-      const tokens = await tokenManager.getTokens(userId);
-      if (tokens?.refreshToken) {
-        try {
-          const newTokens = await refreshAccessToken(client, tokens.refreshToken);
-          await tokenManager.saveTokens(userId, newTokens);
-          
-          // Retry with refreshed client
-          client = await createUserPcoClient(userId);
-          return await operation(client);
-        } catch (refreshError) {
-          // Refresh failed, user needs to re-authenticate
-          await tokenManager.clearTokens(userId);
-          throw new Error('Authentication expired. Please reconnect to Planning Center.');
-        }
-      }
+    if (error instanceof PcoApiError && error.status === 401) {
+      // Token might be expired, the client will automatically refresh
+      // If refresh fails, the onRefreshFailure callback will be called
+      throw new Error('Authentication expired. Please reconnect to Planning Center.');
     }
     throw error;
   }
@@ -451,15 +437,13 @@ export async function withTokenRefresh<T>(
 
 ```env
 # Never commit these to version control
-PCO_APP_ID=your_app_id_here
-PCO_APP_SECRET=your_app_secret_here
 PCO_PERSONAL_ACCESS_TOKEN=your_token_here
+PCO_ACCESS_TOKEN=your_oauth_access_token_here
+PCO_REFRESH_TOKEN=your_oauth_refresh_token_here
 
 # Use different values for different environments
-PCO_APP_ID_DEV=dev_app_id
-PCO_APP_SECRET_DEV=dev_app_secret
-PCO_APP_ID_PROD=prod_app_id
-PCO_APP_SECRET_PROD=prod_app_secret
+PCO_PERSONAL_ACCESS_TOKEN_DEV=dev_token
+PCO_PERSONAL_ACCESS_TOKEN_PROD=prod_token
 ```
 
 ### Token Storage Security
@@ -484,11 +468,11 @@ function decryptToken(encryptedToken: string): string {
   return decrypted;
 }
 
-// ❌ Bad: Store tokens in plain text
+// Store encrypted tokens
 await database.tokens.save({
   userId,
-  accessToken: tokens.access_token, // Unencrypted!
-  refreshToken: tokens.refresh_token, // Unencrypted!
+  accessToken: encryptToken(tokens.access_token),
+  refreshToken: encryptToken(tokens.refresh_token),
 });
 ```
 
@@ -496,17 +480,14 @@ await database.tokens.save({
 
 ```typescript
 // ✅ Good: Force HTTPS in production
-const client = createPcoClient({
-  accessToken: userToken,
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  },
   baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://api.planningcenteronline.com/people/v2'
     : 'http://localhost:3000/api/pco', // Development only
-});
-
-// ❌ Bad: HTTP in production
-const client = createPcoClient({
-  accessToken: userToken,
-  baseURL: 'http://api.planningcenteronline.com/people/v2', // Insecure!
 });
 ```
 
@@ -539,27 +520,23 @@ if (!validateTokens(tokens)) {
 ### Authentication Errors
 
 ```typescript
-import { PcoError, ErrorCategory } from '@rachelallyson/planning-center-people-ts';
+import { PcoApiError } from '@rachelallyson/planning-center-people-ts';
 
 try {
-  const people = await getPeople(client);
+  const people = await client.people.getAll();
 } catch (error) {
-  if (error instanceof PcoError) {
-    switch (error.category) {
-      case ErrorCategory.AUTHENTICATION:
-        if (error.status === 401) {
-          // Token expired or invalid
-          console.log('Authentication failed - token may be expired');
-          await handleTokenExpiration(userId);
-        }
+  if (error instanceof PcoApiError) {
+    switch (error.status) {
+      case 401:
+        // Token expired or invalid
+        console.log('Authentication failed - token may be expired');
+        await handleTokenExpiration(userId);
         break;
         
-      case ErrorCategory.AUTHORIZATION:
-        if (error.status === 403) {
-          // Insufficient permissions
-          console.log('Insufficient permissions for this operation');
-          await handleInsufficientPermissions(userId);
-        }
+      case 403:
+        // Insufficient permissions
+        console.log('Insufficient permissions for this operation');
+        await handleInsufficientPermissions(userId);
         break;
         
       default:
@@ -572,32 +549,29 @@ try {
 ### Token Refresh Error Handling
 
 ```typescript
-const client = createPcoClient({
-  accessToken: userToken,
-  refreshToken: userRefreshToken,
-  appId: process.env.PCO_APP_ID!,
-  appSecret: process.env.PCO_APP_SECRET!,
-  
-  onTokenRefreshFailure: async (error, context) => {
-    console.error('Token refresh failed:', {
-      error: error.message,
-      context: context.endpoint,
-      userId: context.metadata?.userId,
-    });
+const client = new PcoClient({
+  auth: {
+    type: 'oauth',
+    accessToken: userToken,
+    refreshToken: userRefreshToken,
     
-    // Handle different failure scenarios
-    if (error.message.includes('invalid_grant')) {
-      // Refresh token is invalid - user needs to re-authenticate
-      await clearUserTokens(userId);
-      await notifyUserReauth(userId);
-    } else if (error.message.includes('Network error')) {
-      // Network issue - could be temporary
-      await scheduleRetry(userId);
-    } else {
-      // Unknown error - log for investigation
-      await logError(error, context);
+    onRefreshFailure: async (error) => {
+      console.error('Token refresh failed:', error.message);
+      
+      // Handle different failure scenarios
+      if (error.message.includes('invalid_grant')) {
+        // Refresh token is invalid - user needs to re-authenticate
+        await clearUserTokens(userId);
+        await notifyUserReauth(userId);
+      } else if (error.message.includes('Network error')) {
+        // Network issue - could be temporary
+        await scheduleRetry(userId);
+      } else {
+        // Unknown error - log for investigation
+        await logError(error);
+      }
     }
-  },
+  }
 });
 ```
 
@@ -607,29 +581,34 @@ const client = createPcoClient({
 
 ```typescript
 // tests/mocks/pco-client.ts
-import { createPcoClient } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
-export const mockPcoClient = createPcoClient({
-  personalAccessToken: 'mock-token',
-  appId: 'mock-app-id',
-  appSecret: 'mock-app-secret',
+export const mockPcoClient = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: 'mock-token'
+  }
 });
 
 // Mock successful responses
 jest.mock('@rachelallyson/planning-center-people-ts', () => ({
   ...jest.requireActual('@rachelallyson/planning-center-people-ts'),
-  getPeople: jest.fn().mockResolvedValue({
-    data: [
-      {
-        id: '1',
-        type: 'Person',
-        attributes: {
-          first_name: 'John',
-          last_name: 'Doe',
-        },
-      },
-    ],
-  }),
+  PcoClient: jest.fn().mockImplementation(() => ({
+    people: {
+      getAll: jest.fn().mockResolvedValue({
+        data: [
+          {
+            id: '1',
+            type: 'Person',
+            attributes: {
+              first_name: 'John',
+              last_name: 'Doe',
+            },
+          },
+        ],
+      }),
+    },
+  })),
 }));
 ```
 
@@ -637,32 +616,34 @@ jest.mock('@rachelallyson/planning-center-people-ts', () => ({
 
 ```typescript
 // tests/integration/auth.test.ts
-import { createPcoClient } from '@rachelallyson/planning-center-people-ts';
+import { PcoClient } from '@rachelallyson/planning-center-people-ts';
 
 describe('Authentication Integration', () => {
-  let client: PcoClientState;
+  let client: PcoClient;
   
   beforeAll(() => {
-    client = createPcoClient({
-      personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
-      appId: process.env.PCO_APP_ID!,
-      appSecret: process.env.PCO_APP_SECRET!,
+    client = new PcoClient({
+      auth: {
+        type: 'personal_access_token',
+        personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+      }
     });
   });
   
   it('should authenticate successfully', async () => {
-    const people = await getPeople(client, { per_page: 1 });
+    const people = await client.people.getAll({ perPage: 1 });
     expect(people.data).toBeDefined();
   });
   
   it('should handle invalid credentials', async () => {
-    const invalidClient = createPcoClient({
-      personalAccessToken: 'invalid-token',
-      appId: 'invalid-app-id',
-      appSecret: 'invalid-secret',
+    const invalidClient = new PcoClient({
+      auth: {
+        type: 'personal_access_token',
+        personalAccessToken: 'invalid-token'
+      }
     });
     
-    await expect(getPeople(invalidClient)).rejects.toThrow();
+    await expect(invalidClient.people.getAll()).rejects.toThrow();
   });
 });
 ```
@@ -675,23 +656,24 @@ describe('Authentication Integration', () => {
 
 ```typescript
 // Check your credentials
-console.log('App ID:', process.env.PCO_APP_ID);
-console.log('App Secret:', process.env.PCO_APP_SECRET ? 'Set' : 'Not set');
-console.log('Token:', process.env.PCO_PERSONAL_ACCESS_TOKEN ? 'Set' : 'Not set');
+console.log('Personal Access Token:', process.env.PCO_PERSONAL_ACCESS_TOKEN ? 'Set' : 'Not set');
+console.log('OAuth Access Token:', process.env.PCO_ACCESS_TOKEN ? 'Set' : 'Not set');
+console.log('OAuth Refresh Token:', process.env.PCO_REFRESH_TOKEN ? 'Set' : 'Not set');
 ```
 
 #### Issue: "Token expired"
 
 ```typescript
 // For OAuth tokens, implement refresh logic
-const client = createPcoClient({
-  accessToken: userToken,
-  refreshToken: userRefreshToken,
-  appId: process.env.PCO_APP_ID!,
-  appSecret: process.env.PCO_APP_SECRET!,
-  onTokenRefresh: async (newTokens) => {
-    await saveTokensToDatabase(userId, newTokens);
-  },
+const client = new PcoClient({
+  auth: {
+    type: 'oauth',
+    accessToken: userToken,
+    refreshToken: userRefreshToken,
+    onRefresh: async (newTokens) => {
+      await saveTokensToDatabase(userId, newTokens);
+    }
+  }
 });
 ```
 
@@ -705,26 +687,30 @@ const client = createPcoClient({
 ### Debug Mode
 
 ```typescript
-// Enable debug logging
-const client = createPcoClient({
-  personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!,
-  appId: process.env.PCO_APP_ID!,
-  appSecret: process.env.PCO_APP_SECRET!,
-  
-  // Add custom headers for debugging
-  headers: {
-    'X-Debug': 'true',
-    'User-Agent': 'MyApp/1.0.0 (Debug Mode)',
-  },
+// Enable debug logging with the event system
+const client = new PcoClient({
+  auth: {
+    type: 'personal_access_token',
+    personalAccessToken: process.env.PCO_PERSONAL_ACCESS_TOKEN!
+  }
+});
+
+// Listen to authentication events
+client.on('auth:failure', (event) => {
+  console.error('Authentication failed:', event.error.message);
+});
+
+client.on('error', (event) => {
+  console.error('API Error:', event.error.message);
 });
 ```
 
 ## Next Steps
 
-- 📚 **[API Reference](./API_REFERENCE.md)** - Explore all available functions
-- 💡 **[Examples](./EXAMPLES.md)** - See real-world usage patterns
-- 🛠️ **[Error Handling](./ERROR_HANDLING.md)** - Handle errors gracefully
-- ⚡ **[Performance Guide](./PERFORMANCE.md)** - Optimize your API usage
+- 📚 **[API Reference](./API_REFERENCE.md)** - Explore all available methods
+- 💡 **[API Usage Guide](./API_USAGE_GUIDE.md)** - See real-world usage patterns
+- 🛠️ **[Best Practices](./BEST_PRACTICES.md)** - Production best practices
+- 📚 **[Examples](./EXAMPLES.md)** - Complete examples
 
 ---
 
