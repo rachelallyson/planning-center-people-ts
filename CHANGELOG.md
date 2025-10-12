@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2025-01-10
+
+### 🐛 **CRITICAL BUG FIXES**
+
+This patch release fixes critical bugs in the `findOrCreate` method that would cause runtime errors and API failures.
+
+### Fixed
+
+- **🐛 Critical Bug in findOrCreate**: Fixed broken contact creation in `findOrCreate` method
+  - **Issue**: `createWithContacts` method didn't exist, causing runtime errors
+  - **Issue**: Email/phone passed to person creation caused 422 API errors
+  - **Fix**: Now properly creates person first, then adds contacts separately
+  - **Enhancement**: Added campus assignment support with `campusId` option
+  - **Enhancement**: Added proper error handling for contact creation failures
+
+### Changed
+
+- **🧹 Cleaned up PersonMatchOptions interface**: Removed unused `campus` field, kept only functional `campusId` field
+- **📝 Better error handling**: Contact creation failures now log warnings instead of crashing
+
+### Migration
+
+No breaking changes - this is a bug fix release:
+
+```typescript
+// This now works correctly (was broken in 2.6.0)
+const person = await client.people.findOrCreate({
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com',
+    phone: '555-1234',
+    campusId: 'campus-123'  // NEW: Campus assignment support
+});
+```
+
 ## [2.6.0] - 2025-01-10
 
 ### 🎯 **PERFORMANCE & DEPENDENCY OPTIMIZATION**

@@ -175,7 +175,7 @@ export class PersonMatcher {
         // Add email contact if provided
         if (options.email) {
             try {
-                await this.peopleModule.createEmail(person.id, {
+                await this.peopleModule.addEmail(person.id, {
                     address: options.email,
                     primary: true
                 });
@@ -187,7 +187,7 @@ export class PersonMatcher {
         // Add phone contact if provided
         if (options.phone) {
             try {
-                await this.peopleModule.createPhoneNumber(person.id, {
+                await this.peopleModule.addPhoneNumber(person.id, {
                     number: options.phone,
                     primary: true
                 });
