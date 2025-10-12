@@ -163,28 +163,46 @@ export class PersonMatcher {
      * Create a new person
      */
     private async createPerson(options: PersonMatchOptions): Promise<PersonResource> {
+        // Create basic person data (only name fields)
         const personData: any = {};
 
         if (options.firstName) personData.first_name = options.firstName;
         if (options.lastName) personData.last_name = options.lastName;
-        if (options.email) personData.email = options.email;
-        if (options.phone) personData.phone = options.phone;
 
+        // Create the person first
         const person = await this.peopleModule.create(personData);
 
-        // Add contact information if provided
-        const contacts: any = {};
-
+        // Add email contact if provided
         if (options.email) {
-            contacts.email = { address: options.email, primary: true };
+            try {
+                await this.peopleModule.createEmail(person.id, {
+                    address: options.email,
+                    primary: true
+                });
+            } catch (error) {
+                console.warn('Failed to create email contact:', error);
+            }
         }
 
+        // Add phone contact if provided
         if (options.phone) {
-            contacts.phone = { number: options.phone, primary: true };
+            try {
+                await this.peopleModule.createPhoneNumber(person.id, {
+                    number: options.phone,
+                    primary: true
+                });
+            } catch (error) {
+                console.warn('Failed to create phone contact:', error);
+            }
         }
 
-        if (Object.keys(contacts).length > 0) {
-            await this.peopleModule.createWithContacts(personData, contacts);
+        // Set campus if provided
+        if (options.campusId) {
+            try {
+                await this.peopleModule.setPrimaryCampus(person.id, options.campusId);
+            } catch (error) {
+                console.warn('Failed to set campus:', error);
+            }
         }
 
         return person;

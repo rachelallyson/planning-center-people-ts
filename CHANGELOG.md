@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This release focuses on performance improvements and dependency optimization, making the library lighter, faster, and more efficient.
 
+### Fixed
+
+- **🐛 Critical Bug in findOrCreate**: Fixed broken contact creation in `findOrCreate` method
+  - **Issue**: `createWithContacts` method didn't exist, causing runtime errors
+  - **Issue**: Email/phone passed to person creation caused 422 API errors
+  - **Fix**: Now properly creates person first, then adds contacts separately
+  - **Enhancement**: Added campus assignment support with `campusId` option
+  - **Enhancement**: Added proper error handling for contact creation failures
+
 ### Removed
 
 - **📦 Axios Dependency**: Completely removed axios dependency by replacing it with native fetch API

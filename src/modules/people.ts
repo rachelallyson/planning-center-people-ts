@@ -67,6 +67,7 @@ export interface PersonMatchOptions {
     phone?: string;
     matchStrategy?: 'exact' | 'fuzzy' | 'aggressive';
     campus?: string;
+    campusId?: string;
     createIfNotFound?: boolean;
     agePreference?: 'adults' | 'children' | 'any';
     minAge?: number;
