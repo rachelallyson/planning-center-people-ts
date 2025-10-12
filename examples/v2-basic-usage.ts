@@ -89,6 +89,48 @@ async function peopleOperations(client: PcoClient) {
 
     console.log('Person found/created:', person.id);
 
+    // Age preference matching examples
+    console.log('\n--- Age Preference Examples ---');
+
+    // Prefer adults (18+ years old)
+    const adultPerson = await client.people.findOrCreate({
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane@example.com',
+        agePreference: 'adults',
+        matchStrategy: 'fuzzy',
+    });
+    console.log('Adult person found:', adultPerson.id);
+
+    // Prefer children (under 18 years old)
+    const childPerson = await client.people.findOrCreate({
+        firstName: 'Bobby',
+        lastName: 'Johnson',
+        agePreference: 'children',
+        matchStrategy: 'fuzzy',
+    });
+    console.log('Child person found:', childPerson.id);
+
+    // Match by age range
+    const youngAdult = await client.people.findOrCreate({
+        firstName: 'Alice',
+        lastName: 'Brown',
+        email: 'alice@example.com',
+        minAge: 20,
+        maxAge: 30,
+        matchStrategy: 'fuzzy',
+    });
+    console.log('Young adult found:', youngAdult.id);
+
+    // Match by birth year
+    const millennial = await client.people.findOrCreate({
+        firstName: 'David',
+        lastName: 'Wilson',
+        birthYear: 1990,
+        matchStrategy: 'fuzzy',
+    });
+    console.log('Millennial found:', millennial.id);
+
     // Create person with contact information
     const personWithContacts = await client.people.createWithContacts(
         {

@@ -244,6 +244,10 @@ export class PcoHttpClient {
             headers.Authorization = `Basic ${Buffer.from(this.config.auth.personalAccessToken).toString('base64')}`;
         } else if (this.config.auth.type === 'oauth') {
             headers.Authorization = `Bearer ${this.config.auth.accessToken}`;
+        } else if (this.config.auth.type === 'basic') {
+            // Basic auth with app credentials
+            const credentials = Buffer.from(`${this.config.auth.appId}:${this.config.auth.appSecret}`).toString('base64');
+            headers.Authorization = `Basic ${credentials}`;
         }
     }
 
@@ -286,19 +290,33 @@ export class PcoHttpClient {
         const baseURL = this.config.baseURL || 'https://api.planningcenteronline.com/people/v2';
         const tokenUrl = baseURL.replace('/people/v2', '/oauth/token');
 
+        // Prepare the request body for token refresh
+        const body = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: this.config.auth.refreshToken,
+        });
+
+        // Add client credentials if available from the config or environment
+        const clientId = this.config.auth.clientId || process.env.PCO_APP_ID;
+        const clientSecret = this.config.auth.clientSecret || process.env.PCO_APP_SECRET;
+        
+        if (clientId && clientSecret) {
+            body.append('client_id', clientId);
+            body.append('client_secret', clientSecret);
+        }
+
         const response = await fetch(tokenUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
             },
-            body: new URLSearchParams({
-                grant_type: 'refresh_token',
-                refresh_token: this.config.auth.refreshToken,
-            }),
+            body: body.toString(),
         });
 
         if (!response.ok) {
-            throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Token refresh failed: ${response.status} ${response.statusText}. ${JSON.stringify(errorData)}`);
         }
 
         const tokens = await response.json();

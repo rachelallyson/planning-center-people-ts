@@ -93,6 +93,82 @@ export function calculateAge(birthdate: string): number {
 }
 
 /**
+ * Calculate age from birthdate string, handling invalid dates
+ */
+export function calculateAgeSafe(birthdate: string | undefined): number | null {
+    if (!birthdate) return null;
+
+    try {
+        const birth = new Date(birthdate);
+        if (isNaN(birth.getTime())) return null;
+
+        return calculateAge(birthdate);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Check if a person is an adult (18+ years old)
+ */
+export function isAdult(birthdate: string | undefined): boolean {
+    const age = calculateAgeSafe(birthdate);
+    return age !== null && age >= 18;
+}
+
+/**
+ * Check if a person is a child (under 18 years old)
+ */
+export function isChild(birthdate: string | undefined): boolean {
+    const age = calculateAgeSafe(birthdate);
+    return age !== null && age < 18;
+}
+
+/**
+ * Check if a person's age matches the given criteria
+ */
+export function matchesAgeCriteria(
+    birthdate: string | undefined,
+    criteria: {
+        agePreference?: 'adults' | 'children' | 'any';
+        minAge?: number;
+        maxAge?: number;
+        birthYear?: number;
+    }
+): boolean {
+    const age = calculateAgeSafe(birthdate);
+
+    // If no birthdate, only match if preference is 'any'
+    if (age === null) {
+        return criteria.agePreference === 'any' || criteria.agePreference === undefined;
+    }
+
+    // Check age preference
+    if (criteria.agePreference === 'adults' && age < 18) return false;
+    if (criteria.agePreference === 'children' && age >= 18) return false;
+
+    // Check age range
+    if (criteria.minAge !== undefined && age < criteria.minAge) return false;
+    if (criteria.maxAge !== undefined && age > criteria.maxAge) return false;
+
+    // Check birth year
+    if (criteria.birthYear !== undefined) {
+        const birthYear = new Date(birthdate!).getFullYear();
+        if (birthYear !== criteria.birthYear) return false;
+    }
+
+    return true;
+}
+
+/**
+ * Calculate birth year from age
+ */
+export function calculateBirthYearFromAge(age: number): number {
+    const currentYear = new Date().getFullYear();
+    return currentYear - age;
+}
+
+/**
  * Validate email format
  */
 export function isValidEmail(email: string): boolean {

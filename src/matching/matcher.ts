@@ -7,6 +7,7 @@ import type { PersonResource } from '../types';
 import { PersonMatchOptions } from '../modules/people';
 import { MatchStrategies } from './strategies';
 import { MatchScorer } from './scoring';
+import { matchesAgeCriteria } from '../helpers';
 
 export interface MatchResult {
     person: PersonResource;
@@ -129,7 +130,33 @@ export class PersonMatcher {
             index === self.findIndex(p => p.id === person.id)
         );
 
-        return uniqueCandidates;
+        // Filter by age preferences if specified
+        const ageFilteredCandidates = this.filterByAgePreferences(uniqueCandidates, options);
+
+        return ageFilteredCandidates;
+    }
+
+    /**
+     * Filter candidates by age preferences
+     */
+    private filterByAgePreferences(candidates: PersonResource[], options: PersonMatchOptions): PersonResource[] {
+        // If no age criteria specified, return all candidates
+        if (!options.agePreference &&
+            options.minAge === undefined &&
+            options.maxAge === undefined &&
+            options.birthYear === undefined) {
+            return candidates;
+        }
+
+        return candidates.filter(person => {
+            const birthdate = person.attributes?.birthdate;
+            return matchesAgeCriteria(birthdate, {
+                agePreference: options.agePreference,
+                minAge: options.minAge,
+                maxAge: options.maxAge,
+                birthYear: options.birthYear
+            });
+        });
     }
 
     /**

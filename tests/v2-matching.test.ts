@@ -271,6 +271,54 @@ describe('Person Matching v2.0.0', () => {
             expect(result.attributes.first_name).toBe('John');
             expect(result.attributes.last_name).toBe('Doe');
         });
+
+        it('should only match exact names, not similar ones', async () => {
+            const exactMatch = MockResponseBuilder.person({
+                id: 'exact_match_123',
+                first_name: 'John',
+                last_name: 'Doe',
+            });
+
+            const similarName = MockResponseBuilder.person({
+                id: 'similar_name_456',
+                first_name: 'Jon', // Similar to John
+                last_name: 'Dough', // Similar to Doe
+            });
+
+            const client = createTestClient({
+                people: {
+                    search: (criteria: any) => {
+                        if (criteria.name === 'John Doe') {
+                            return Promise.resolve({
+                                data: [exactMatch, similarName],
+                                meta: { total_count: 2 },
+                                links: { self: '/people', next: null, prev: null },
+                            });
+                        }
+                        return Promise.resolve({
+                            data: [],
+                            meta: { total_count: 0 },
+                            links: { self: '/people', next: null, prev: null },
+                        });
+                    },
+
+                    findOrCreate: (options: any) => {
+                        // Should return the exact match, not the similar one
+                        return Promise.resolve(exactMatch);
+                    },
+                },
+            });
+
+            const result = await client.people.findOrCreate({
+                firstName: 'John',
+                lastName: 'Doe',
+                matchStrategy: 'fuzzy',
+            });
+
+            expect(result.id).toBe('exact_match_123');
+            expect(result.attributes.first_name).toBe('John');
+            expect(result.attributes.last_name).toBe('Doe');
+        });
     });
 
     describe('Person Creation with Contacts', () => {
@@ -405,6 +453,296 @@ describe('Person Matching v2.0.0', () => {
             });
 
             expect(result).toBeDefined();
+        });
+    });
+
+    describe('Age Preference Matching', () => {
+        it('should prefer adults when agePreference is set to adults', async () => {
+            const adultPerson = MockResponseBuilder.person({
+                id: 'adult_person_123',
+                first_name: 'John',
+                last_name: 'Doe',
+                birthdate: '1990-01-01', // 34 years old
+            });
+
+            const childPerson = MockResponseBuilder.person({
+                id: 'child_person_456',
+                first_name: 'John',
+                last_name: 'Doe',
+                birthdate: '2010-01-01', // 14 years old
+            });
+
+            const client = createTestClient({
+                people: {
+                    search: (criteria: any) => {
+                        if (criteria.name === 'John Doe') {
+                            return Promise.resolve({
+                                data: [adultPerson, childPerson],
+                                meta: { total_count: 2 },
+                                links: { self: '/people', next: null, prev: null },
+                            });
+                        }
+                        return Promise.resolve({
+                            data: [],
+                            meta: { total_count: 0 },
+                            links: { self: '/people', next: null, prev: null },
+                        });
+                    },
+
+                    findOrCreate: (options: any) => {
+                        expect(options.agePreference).toBe('adults');
+                        return Promise.resolve(adultPerson);
+                    },
+                },
+            });
+
+            const result = await client.people.findOrCreate({
+                firstName: 'John',
+                lastName: 'Doe',
+                agePreference: 'adults',
+                matchStrategy: 'fuzzy',
+            });
+
+            expect(result.id).toBe('adult_person_123');
+        });
+
+        it('should prefer children when agePreference is set to children', async () => {
+            const adultPerson = MockResponseBuilder.person({
+                id: 'adult_person_123',
+                first_name: 'Jane',
+                last_name: 'Smith',
+                birthdate: '1985-01-01', // 39 years old
+            });
+
+            const childPerson = MockResponseBuilder.person({
+                id: 'child_person_456',
+                first_name: 'Jane',
+                last_name: 'Smith',
+                birthdate: '2015-01-01', // 9 years old
+            });
+
+            const client = createTestClient({
+                people: {
+                    search: (criteria: any) => {
+                        if (criteria.name === 'Jane Smith') {
+                            return Promise.resolve({
+                                data: [adultPerson, childPerson],
+                                meta: { total_count: 2 },
+                                links: { self: '/people', next: null, prev: null },
+                            });
+                        }
+                        return Promise.resolve({
+                            data: [],
+                            meta: { total_count: 0 },
+                            links: { self: '/people', next: null, prev: null },
+                        });
+                    },
+
+                    findOrCreate: (options: any) => {
+                        expect(options.agePreference).toBe('children');
+                        return Promise.resolve(childPerson);
+                    },
+                },
+            });
+
+            const result = await client.people.findOrCreate({
+                firstName: 'Jane',
+                lastName: 'Smith',
+                agePreference: 'children',
+                matchStrategy: 'fuzzy',
+            });
+
+            expect(result.id).toBe('child_person_456');
+        });
+
+        it('should match by age range when minAge and maxAge are specified', async () => {
+            const youngAdult = MockResponseBuilder.person({
+                id: 'young_adult_123',
+                first_name: 'Bob',
+                last_name: 'Johnson',
+                birthdate: '2000-01-01', // 24 years old
+            });
+
+            const olderAdult = MockResponseBuilder.person({
+                id: 'older_adult_456',
+                first_name: 'Bob',
+                last_name: 'Johnson',
+                birthdate: '1970-01-01', // 54 years old
+            });
+
+            const client = createTestClient({
+                people: {
+                    search: (criteria: any) => {
+                        if (criteria.name === 'Bob Johnson') {
+                            return Promise.resolve({
+                                data: [youngAdult, olderAdult],
+                                meta: { total_count: 2 },
+                                links: { self: '/people', next: null, prev: null },
+                            });
+                        }
+                        return Promise.resolve({
+                            data: [],
+                            meta: { total_count: 0 },
+                            links: { self: '/people', next: null, prev: null },
+                        });
+                    },
+
+                    findOrCreate: (options: any) => {
+                        expect(options.minAge).toBe(20);
+                        expect(options.maxAge).toBe(30);
+                        return Promise.resolve(youngAdult);
+                    },
+                },
+            });
+
+            const result = await client.people.findOrCreate({
+                firstName: 'Bob',
+                lastName: 'Johnson',
+                minAge: 20,
+                maxAge: 30,
+                matchStrategy: 'fuzzy',
+            });
+
+            expect(result.id).toBe('young_adult_123');
+        });
+
+        it('should match by birth year when birthYear is specified', async () => {
+            const person1990 = MockResponseBuilder.person({
+                id: 'person_1990',
+                first_name: 'Alice',
+                last_name: 'Brown',
+                birthdate: '1990-06-15', // Born in 1990
+            });
+
+            const person2000 = MockResponseBuilder.person({
+                id: 'person_2000',
+                first_name: 'Alice',
+                last_name: 'Brown',
+                birthdate: '2000-03-20', // Born in 2000
+            });
+
+            const client = createTestClient({
+                people: {
+                    search: (criteria: any) => {
+                        if (criteria.name === 'Alice Brown') {
+                            return Promise.resolve({
+                                data: [person1990, person2000],
+                                meta: { total_count: 2 },
+                                links: { self: '/people', next: null, prev: null },
+                            });
+                        }
+                        return Promise.resolve({
+                            data: [],
+                            meta: { total_count: 0 },
+                            links: { self: '/people', next: null, prev: null },
+                        });
+                    },
+
+                    findOrCreate: (options: any) => {
+                        expect(options.birthYear).toBe(1990);
+                        return Promise.resolve(person1990);
+                    },
+                },
+            });
+
+            const result = await client.people.findOrCreate({
+                firstName: 'Alice',
+                lastName: 'Brown',
+                birthYear: 1990,
+                matchStrategy: 'fuzzy',
+            });
+
+            expect(result.id).toBe('person_1990');
+        });
+
+        it('should handle people without birthdate gracefully', async () => {
+            const personWithoutBirthdate = MockResponseBuilder.person({
+                id: 'no_birthdate_123',
+                first_name: 'Charlie',
+                last_name: 'Davis',
+                // No birthdate attribute
+            });
+
+            const client = createTestClient({
+                people: {
+                    search: (criteria: any) => {
+                        if (criteria.name === 'Charlie Davis') {
+                            return Promise.resolve({
+                                data: [personWithoutBirthdate],
+                                meta: { total_count: 1 },
+                                links: { self: '/people', next: null, prev: null },
+                            });
+                        }
+                        return Promise.resolve({
+                            data: [],
+                            meta: { total_count: 0 },
+                            links: { self: '/people', next: null, prev: null },
+                        });
+                    },
+
+                    findOrCreate: (options: any) => {
+                        expect(options.agePreference).toBe('any');
+                        return Promise.resolve(personWithoutBirthdate);
+                    },
+                },
+            });
+
+            const result = await client.people.findOrCreate({
+                firstName: 'Charlie',
+                lastName: 'Davis',
+                agePreference: 'any',
+                matchStrategy: 'fuzzy',
+            });
+
+            expect(result.id).toBe('no_birthdate_123');
+        });
+
+        it('should combine age preferences with other matching criteria', async () => {
+            const matchingPerson = MockResponseBuilder.person({
+                id: 'matching_person_123',
+                first_name: 'David',
+                last_name: 'Wilson',
+                birthdate: '1995-01-01', // 29 years old
+            });
+
+            const client = createTestClient({
+                people: {
+                    search: (criteria: any) => {
+                        if (criteria.email === 'david@example.com') {
+                            return Promise.resolve({
+                                data: [matchingPerson],
+                                meta: { total_count: 1 },
+                                links: { self: '/people', next: null, prev: null },
+                            });
+                        }
+                        return Promise.resolve({
+                            data: [],
+                            meta: { total_count: 0 },
+                            links: { self: '/people', next: null, prev: null },
+                        });
+                    },
+
+                    findOrCreate: (options: any) => {
+                        expect(options.email).toBe('david@example.com');
+                        expect(options.agePreference).toBe('adults');
+                        expect(options.minAge).toBe(25);
+                        expect(options.maxAge).toBe(35);
+                        return Promise.resolve(matchingPerson);
+                    },
+                },
+            });
+
+            const result = await client.people.findOrCreate({
+                firstName: 'David',
+                lastName: 'Wilson',
+                email: 'david@example.com',
+                agePreference: 'adults',
+                minAge: 25,
+                maxAge: 35,
+                matchStrategy: 'fuzzy',
+            });
+
+            expect(result.id).toBe('matching_person_123');
         });
     });
 });

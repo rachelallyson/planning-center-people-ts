@@ -4,6 +4,7 @@
 
 import type { PersonResource } from '../types';
 import type { PersonMatchOptions } from '../modules/people';
+import { matchesAgeCriteria, calculateAgeSafe } from '../helpers';
 
 export class MatchScorer {
     /**
@@ -16,15 +17,15 @@ export class MatchScorer {
         // Email matching (highest weight)
         if (options.email) {
             const emailScore = this.scoreEmailMatch(person, options.email);
-            totalScore += emailScore * 0.4;
-            maxScore += 0.4;
+            totalScore += emailScore * 0.35;
+            maxScore += 0.35;
         }
 
         // Phone matching (high weight)
         if (options.phone) {
             const phoneScore = this.scorePhoneMatch(person, options.phone);
-            totalScore += phoneScore * 0.3;
-            maxScore += 0.3;
+            totalScore += phoneScore * 0.25;
+            maxScore += 0.25;
         }
 
         // Name matching (medium weight)
@@ -34,10 +35,15 @@ export class MatchScorer {
             maxScore += 0.2;
         }
 
+        // Age matching (medium weight)
+        const ageScore = this.scoreAgeMatch(person, options);
+        totalScore += ageScore * 0.15;
+        maxScore += 0.15;
+
         // Additional criteria (lower weight)
         const additionalScore = this.scoreAdditionalCriteria(person, options);
-        totalScore += additionalScore * 0.1;
-        maxScore += 0.1;
+        totalScore += additionalScore * 0.05;
+        maxScore += 0.05;
 
         return maxScore > 0 ? totalScore / maxScore : 0;
     }
@@ -60,8 +66,23 @@ export class MatchScorer {
             const nameScore = this.scoreNameMatch(person, options);
             if (nameScore > 0.8) {
                 reasons.push('exact name match');
-            } else if (nameScore > 0.6) {
-                reasons.push('similar name match');
+            } else if (nameScore > 0) {
+                reasons.push('partial name match');
+            }
+        }
+
+        // Add age-based match reasons
+        const ageScore = this.scoreAgeMatch(person, options);
+        if (ageScore > 0.8) {
+            const age = calculateAgeSafe(person.attributes?.birthdate);
+            if (age !== null) {
+                if (options.agePreference === 'adults') {
+                    reasons.push('adult age match');
+                } else if (options.agePreference === 'children') {
+                    reasons.push('child age match');
+                } else {
+                    reasons.push(`age ${age} match`);
+                }
             }
         }
 
@@ -93,7 +114,7 @@ export class MatchScorer {
     }
 
     /**
-     * Score name matching
+     * Score name matching - only exact matches
      */
     private scoreNameMatch(person: PersonResource, options: PersonMatchOptions): number {
         const attrs = person.attributes;
@@ -101,25 +122,75 @@ export class MatchScorer {
 
         let score = 0;
 
-        // First name matching
+        // First name matching - exact match only
         if (options.firstName && attrs.first_name) {
-            const firstNameScore = this.calculateStringSimilarity(
-                options.firstName.toLowerCase(),
-                attrs.first_name.toLowerCase()
-            );
-            score += firstNameScore * 0.5;
+            const firstNameMatch = options.firstName.toLowerCase() === attrs.first_name.toLowerCase();
+            score += firstNameMatch ? 0.5 : 0;
         }
 
-        // Last name matching
+        // Last name matching - exact match only
         if (options.lastName && attrs.last_name) {
-            const lastNameScore = this.calculateStringSimilarity(
-                options.lastName.toLowerCase(),
-                attrs.last_name.toLowerCase()
-            );
-            score += lastNameScore * 0.5;
+            const lastNameMatch = options.lastName.toLowerCase() === attrs.last_name.toLowerCase();
+            score += lastNameMatch ? 0.5 : 0;
         }
 
         return score;
+    }
+
+    /**
+     * Score age matching
+     */
+    private scoreAgeMatch(person: PersonResource, options: PersonMatchOptions): number {
+        const birthdate = person.attributes?.birthdate;
+
+        // If no age criteria specified, return neutral score
+        if (!options.agePreference &&
+            options.minAge === undefined &&
+            options.maxAge === undefined &&
+            options.birthYear === undefined) {
+            return 0.5; // Neutral score
+        }
+
+        // If no birthdate available, return low score
+        if (!birthdate) {
+            return 0.1;
+        }
+
+        // Check if person matches age criteria
+        const matches = matchesAgeCriteria(birthdate, {
+            agePreference: options.agePreference,
+            minAge: options.minAge,
+            maxAge: options.maxAge,
+            birthYear: options.birthYear
+        });
+
+        if (!matches) {
+            return 0; // No match
+        }
+
+        // Calculate bonus score based on how well the age matches
+        const age = calculateAgeSafe(birthdate);
+        if (age === null) return 0.5;
+
+        let bonusScore = 0;
+
+        // Bonus for exact age range match
+        if (options.minAge !== undefined && options.maxAge !== undefined) {
+            if (age >= options.minAge && age <= options.maxAge) {
+                bonusScore += 0.3;
+            }
+        }
+
+        // Bonus for exact birth year match
+        if (options.birthYear !== undefined) {
+            const birthYear = new Date(birthdate).getFullYear();
+            if (birthYear === options.birthYear) {
+                bonusScore += 0.4;
+            }
+        }
+
+        // Base score for matching criteria
+        return Math.min(0.6 + bonusScore, 1.0);
     }
 
     /**

@@ -17,7 +17,9 @@ import type {
     AddressResource,
     AddressAttributes,
     SocialProfileResource,
-    SocialProfileAttributes
+    SocialProfileAttributes,
+    CampusResource,
+    HouseholdResource
 } from '../types';
 import { PersonMatcher } from '../matching/matcher';
 
@@ -66,6 +68,10 @@ export interface PersonMatchOptions {
     matchStrategy?: 'exact' | 'fuzzy' | 'aggressive';
     campus?: string;
     createIfNotFound?: boolean;
+    agePreference?: 'adults' | 'children' | 'any';
+    minAge?: number;
+    maxAge?: number;
+    birthYear?: number;
 }
 
 export class PeopleModule extends BaseModule {
@@ -157,6 +163,266 @@ export class PeopleModule extends BaseModule {
      */
     async delete(id: string): Promise<void> {
         return this.deleteResource(`/people/${id}`);
+    }
+
+    // ===== Relationship Management =====
+
+    /**
+     * Get a person's primary campus
+     */
+    async getPrimaryCampus(personId: string): Promise<CampusResource | null> {
+        const person = await this.getById(personId, ['primary_campus']);
+        const campusData = person.relationships?.primary_campus?.data;
+        
+        if (!campusData || Array.isArray(campusData) || !campusData.id) {
+            return null;
+        }
+
+        // Get the full campus resource
+        return this.httpClient.request<CampusResource>({
+            method: 'GET',
+            endpoint: `/campuses/${campusData.id}`
+        }).then(response => response.data);
+    }
+
+    /**
+     * Set a person's primary campus
+     */
+    async setPrimaryCampus(personId: string, campusId: string): Promise<PersonResource> {
+        return this.httpClient.request<PersonResource>({
+            method: 'PATCH',
+            endpoint: `/people/${personId}`,
+            data: {
+                data: {
+                    type: 'Person',
+                    id: personId,
+                    attributes: {
+                        primary_campus_id: campusId
+                    }
+                }
+            }
+        }).then(response => response.data);
+    }
+
+    /**
+     * Remove a person's primary campus
+     */
+    async removePrimaryCampus(personId: string): Promise<PersonResource> {
+        return this.httpClient.request<PersonResource>({
+            method: 'PATCH',
+            endpoint: `/people/${personId}`,
+            data: {
+                data: {
+                    type: 'Person',
+                    id: personId,
+                    attributes: {
+                        primary_campus_id: null
+                    }
+                }
+            }
+        }).then(response => response.data);
+    }
+
+    /**
+     * Get a person's household
+     */
+    async getHousehold(personId: string): Promise<HouseholdResource | null> {
+        const person = await this.getById(personId, ['household']);
+        const householdData = person.relationships?.household?.data;
+        
+        if (!householdData || Array.isArray(householdData) || !householdData.id) {
+            return null;
+        }
+
+        // Get the full household resource
+        return this.httpClient.request<HouseholdResource>({
+            method: 'GET',
+            endpoint: `/households/${householdData.id}`
+        }).then(response => response.data);
+    }
+
+    /**
+     * Set a person's household
+     */
+    async setHousehold(personId: string, householdId: string): Promise<PersonResource> {
+        return this.httpClient.request<PersonResource>({
+            method: 'PATCH',
+            endpoint: `/people/${personId}`,
+            data: {
+                data: {
+                    type: 'Person',
+                    id: personId,
+                    attributes: {
+                        household_id: householdId
+                    }
+                }
+            }
+        }).then(response => response.data);
+    }
+
+    /**
+     * Remove a person from their household
+     */
+    async removeFromHousehold(personId: string): Promise<PersonResource> {
+        return this.httpClient.request<PersonResource>({
+            method: 'PATCH',
+            endpoint: `/people/${personId}`,
+            data: {
+                data: {
+                    type: 'Person',
+                    id: personId,
+                    attributes: {
+                        household_id: null
+                    }
+                }
+            }
+        }).then(response => response.data);
+    }
+
+    /**
+     * Get all people in a specific household
+     */
+    async getHouseholdMembers(householdId: string, options: PeopleListOptions = {}): Promise<{ data: PersonResource[]; meta?: any; links?: any }> {
+        const params: Record<string, any> = {
+            'where[household_id]': householdId
+        };
+
+        if (options.include) {
+            params.include = options.include.join(',');
+        }
+
+        if (options.perPage) {
+            params.per_page = options.perPage;
+        }
+
+        if (options.page) {
+            params.page = options.page;
+        }
+
+        return this.getList<PersonResource>('/people', params);
+    }
+
+    /**
+     * Get people by campus
+     */
+    async getByCampus(campusId: string, options: PeopleListOptions = {}): Promise<{ data: PersonResource[]; meta?: any; links?: any }> {
+        const params: Record<string, any> = {
+            'where[primary_campus_id]': campusId
+        };
+
+        if (options.include) {
+            params.include = options.include.join(',');
+        }
+
+        if (options.perPage) {
+            params.per_page = options.perPage;
+        }
+
+        if (options.page) {
+            params.page = options.page;
+        }
+
+        return this.getList<PersonResource>('/people', params);
+    }
+
+    /**
+     * Get a person's workflow cards
+     */
+    async getWorkflowCards(personId: string, options: {
+        include?: string[];
+        perPage?: number;
+        page?: number;
+    } = {}): Promise<{ data: any[]; meta?: any; links?: any }> {
+        const params: Record<string, any> = {};
+
+        if (options.include) {
+            params.include = options.include.join(',');
+        }
+
+        if (options.perPage) {
+            params.per_page = options.perPage;
+        }
+
+        if (options.page) {
+            params.page = options.page;
+        }
+
+        return this.getList(`/people/${personId}/workflow_cards`, params);
+    }
+
+    /**
+     * Get a person's notes
+     */
+    async getNotes(personId: string, options: {
+        include?: string[];
+        perPage?: number;
+        page?: number;
+    } = {}): Promise<{ data: any[]; meta?: any; links?: any }> {
+        const params: Record<string, any> = {};
+
+        if (options.include) {
+            params.include = options.include.join(',');
+        }
+
+        if (options.perPage) {
+            params.per_page = options.perPage;
+        }
+
+        if (options.page) {
+            params.page = options.page;
+        }
+
+        return this.getList(`/people/${personId}/notes`, params);
+    }
+
+    /**
+     * Get a person's field data
+     */
+    async getFieldData(personId: string, options: {
+        include?: string[];
+        perPage?: number;
+        page?: number;
+    } = {}): Promise<{ data: any[]; meta?: any; links?: any }> {
+        const params: Record<string, any> = {};
+
+        if (options.include) {
+            params.include = options.include.join(',');
+        }
+
+        if (options.perPage) {
+            params.per_page = options.perPage;
+        }
+
+        if (options.page) {
+            params.page = options.page;
+        }
+
+        return this.getList(`/people/${personId}/field_data`, params);
+    }
+
+    /**
+     * Get a person's social profiles
+     */
+    async getSocialProfiles(personId: string, options: {
+        include?: string[];
+        perPage?: number;
+        page?: number;
+    } = {}): Promise<{ data: any[]; meta?: any; links?: any }> {
+        const params: Record<string, any> = {};
+
+        if (options.include) {
+            params.include = options.include.join(',');
+        }
+
+        if (options.perPage) {
+            params.per_page = options.perPage;
+        }
+
+        if (options.page) {
+            params.page = options.page;
+        }
+
+        return this.getList(`/people/${personId}/social_profiles`, params);
     }
 
     /**
@@ -286,12 +552,6 @@ export class PeopleModule extends BaseModule {
         return this.deleteResource(`/people/${personId}/addresses/${addressId}`);
     }
 
-    /**
-     * Get person's social profiles
-     */
-    async getSocialProfiles(personId: string): Promise<{ data: SocialProfileResource[]; meta?: any; links?: any }> {
-        return this.getList<SocialProfileResource>(`/people/${personId}/social_profiles`);
-    }
 
     /**
      * Add a social profile to a person

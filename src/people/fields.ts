@@ -103,14 +103,7 @@ async function createPersonFileFieldDataInternal(
 ): Promise<FieldDataSingle> {
     return withErrorBoundary(
         async () => {
-            // Dynamic import with error handling for optional dependencies
-            let axios: any;
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                axios = require('axios');
-            } catch (error) {
-                throw new Error('axios package is required for file uploads. Please install it: npm install axios');
-            }
+            // No external dependencies needed - using native fetch API
 
             // Extract filename from URL
             const urlParts = fileUrl.split('/');
@@ -140,11 +133,19 @@ async function createPersonFileFieldDataInternal(
                 return mimeTypes[ext.toLowerCase()] || 'application/octet-stream';
             };
 
-            // Download the file from the provided URL
-            const fileResponse = await axios.default.get(fileUrl, {
-                responseType: 'arraybuffer',
-                timeout: 30000, // 30 second timeout
+            // Download the file from the provided URL using native fetch
+            const fileResponse = await fetch(fileUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': '*/*',
+                },
             });
+
+            if (!fileResponse.ok) {
+                throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`);
+            }
+
+            const fileBuffer = await fileResponse.arrayBuffer();
 
             // Step 1: Upload to PCO's upload service first
             let FormDataConstructor: any;
@@ -158,31 +159,31 @@ async function createPersonFileFieldDataInternal(
             }
             const uploadFormData = new FormDataConstructor();
 
-            uploadFormData.append('file', fileResponse.data, {
+            uploadFormData.append('file', Buffer.from(fileBuffer), {
                 contentType: getMimeType(extension),
                 filename,
             });
 
-            // Create a separate axios instance for the upload service with the same auth
-            const uploadAxios = axios.default.create({
+            // Upload to PCO's upload service using native fetch
+            const uploadResponse = await fetch('https://upload.planningcenteronline.com/v2/files', {
+                method: 'POST',
                 headers: {
+                    ...uploadFormData.getHeaders(),
                     Authorization: client.config.accessToken
                         ? `Bearer ${client.config.accessToken}`
                         : `Basic ${Buffer.from(`${client.config.appId}:${client.config.appSecret}`).toString('base64')}`,
                 },
+                body: uploadFormData,
             });
 
-            const uploadResponse = await uploadAxios.post(
-                'https://upload.planningcenteronline.com/v2/files',
-                uploadFormData,
-                {
-                    headers: uploadFormData.getHeaders(),
-                    timeout: 60000,
-                }
-            );
+            if (!uploadResponse.ok) {
+                throw new Error(`Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}`);
+            }
+
+            const uploadData = await uploadResponse.json();
 
             // Step 2: Get the file UUID from the response
-            const fileUUID = uploadResponse.data?.data?.[0]?.id;
+            const fileUUID = uploadData?.data?.[0]?.id;
 
             if (!fileUUID) {
                 throw new Error('Failed to get file UUID from upload response');

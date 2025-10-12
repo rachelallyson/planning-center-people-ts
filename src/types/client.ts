@@ -15,10 +15,21 @@ export interface OAuthAuth {
     refreshToken: string;
     onRefresh: (tokens: { accessToken: string; refreshToken: string }) => void | Promise<void>;
     onRefreshFailure: (error: Error) => void | Promise<void>;
+    /** Client ID for token refresh (optional, can use environment variable PCO_APP_ID) */
+    clientId?: string;
+    /** Client Secret for token refresh (optional, can use environment variable PCO_APP_SECRET) */
+    clientSecret?: string;
+}
+
+/** Authentication configuration for Basic Auth with app credentials */
+export interface BasicAuth {
+    type: 'basic';
+    appId: string;
+    appSecret: string;
 }
 
 /** Union type for authentication configurations */
-export type PcoAuthConfig = PersonalAccessTokenAuth | OAuthAuth;
+export type PcoAuthConfig = PersonalAccessTokenAuth | OAuthAuth | BasicAuth;
 
 export interface PcoClientConfig {
     /** Authentication configuration */

@@ -5,6 +5,235 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2025-01-10
+
+### 🎯 **PERFORMANCE & DEPENDENCY OPTIMIZATION**
+
+This release focuses on performance improvements and dependency optimization, making the library lighter, faster, and more efficient.
+
+### Removed
+
+- **📦 Axios Dependency**: Completely removed axios dependency by replacing it with native fetch API
+- **🔧 Simplified Dependencies**: Reduced bundle size by eliminating unnecessary external dependencies
+- **⚡ Performance Boost**: Native fetch API provides better performance than axios
+
+### Improved
+
+- **🚀 File Upload Performance**: File uploads now use native fetch API for better performance
+- **📱 Better Browser Support**: Native fetch works consistently across all modern environments
+- **🛡️ Enhanced Security**: Fewer external dependencies reduce security surface area
+- **📦 Smaller Bundle Size**: Eliminated ~50KB+ dependency from the bundle
+
+### Technical Details
+
+- **File Downloads**: Replaced `axios.get()` with native `fetch()` for downloading files from URLs
+- **File Uploads**: Replaced `axios.post()` with native `fetch()` for uploading to PCO's upload service
+- **Error Handling**: Maintained all existing error handling while using native APIs
+- **Authentication**: Preserved all authentication mechanisms with native fetch
+
+### Migration
+
+No breaking changes - all existing functionality works exactly the same:
+
+```typescript
+// File uploads work exactly the same
+await client.people.setPersonFieldBySlug('person-123', 'resume', fileUrl);
+
+// All other functionality unchanged
+const people = await client.people.getAll();
+```
+
+### Benefits
+
+- **📦 Smaller Bundle**: Reduced dependency footprint
+- **⚡ Better Performance**: Native fetch is faster than axios
+- **🔧 Consistency**: Now using fetch API throughout the entire codebase
+- **🛡️ Security**: Fewer dependencies to audit and maintain
+
+## [2.5.0] - 2025-01-10
+
+### 🎯 **NEW FEATURES - Person Relationship Management & Token Refresh Fix**
+
+This release introduces comprehensive person relationship management endpoints and fixes critical token refresh issues, significantly enhancing the library's functionality and reliability.
+
+### Added
+
+#### **👥 Person Relationship Management**
+
+- **🏢 Campus Management**: Complete campus assignment and retrieval system
+  - `getPrimaryCampus(personId)` - Get person's current campus
+  - `setPrimaryCampus(personId, campusId)` - Assign/update person's campus
+  - `removePrimaryCampus(personId)` - Remove campus assignment
+  - `getByCampus(campusId, options)` - Get all people in a campus
+
+- **🏠 Household Management**: Full household membership system
+  - `getHousehold(personId)` - Get person's household
+  - `setHousehold(personId, householdId)` - Assign person to household
+  - `removeFromHousehold(personId)` - Remove person from household
+  - `getHouseholdMembers(householdId, options)` - Get all household members
+
+- **📋 Related Data Access**: Comprehensive access to person-related data
+  - `getWorkflowCards(personId, options)` - Get person's workflow cards
+  - `getNotes(personId, options)` - Get person's notes
+  - `getFieldData(personId, options)` - Get person's field data
+  - `getSocialProfiles(personId, options)` - Get person's social profiles
+
+#### **🔧 Enhanced Type System**
+
+- **📝 Complete PersonRelationships**: Updated interface with all available relationships
+- **🏷️ Type Safety**: Full TypeScript support for all relationship operations
+- **🛡️ Null Handling**: Proper handling of optional relationships
+- **📊 Resource Validation**: Enhanced relationship data validation
+
+#### **🔐 Token Refresh Fix**
+
+- **🚫 Fixed 401 Unauthorized**: Resolved token refresh failures by including client credentials
+- **🔑 Client Credentials Support**: Added support for `clientId` and `clientSecret` in OAuth config
+- **🌍 Environment Variables**: Support for `PCO_APP_ID` and `PCO_APP_SECRET` environment variables
+- **🔄 Standardized Implementation**: Consistent token refresh across all HTTP clients
+- **🛡️ Enhanced Error Handling**: Better error messages for token refresh failures
+
+### Fixed
+
+- **🔐 Token Refresh 401 Errors**: Fixed "Token refresh failed: 401 Unauthorized" by including required client credentials
+- **🏗️ Missing Auth Types**: Added missing `BasicAuth` type to v2.0.0 client configuration
+- **🔄 Inconsistent Implementations**: Standardized token refresh across `auth.ts` and `http.ts`
+- **📝 Type Definitions**: Enhanced `PersonRelationships` interface with all available relationships
+
+### Removed
+
+- **📦 Axios Dependency**: Removed axios dependency by replacing it with native fetch API in file upload functionality
+- **🔧 Simplified Dependencies**: Reduced bundle size by eliminating unnecessary external dependencies
+
+### Usage Examples
+
+```typescript
+// Campus Management
+const campus = await client.people.getPrimaryCampus('person-123');
+await client.people.setPrimaryCampus('person-123', 'campus-456');
+
+// Household Management
+const household = await client.people.getHousehold('person-123');
+await client.people.setHousehold('person-123', 'household-789');
+
+// Related Data Access
+const workflowCards = await client.people.getWorkflowCards('person-123');
+const notes = await client.people.getNotes('person-123');
+const fieldData = await client.people.getFieldData('person-123');
+
+// Token Refresh with Client Credentials
+const client = new PcoClient({
+    auth: {
+        type: 'oauth',
+        accessToken: 'your-token',
+        refreshToken: 'your-refresh-token',
+        clientId: 'your-app-id',        // NEW: Client credentials
+        clientSecret: 'your-app-secret', // NEW: Client credentials
+        onRefresh: async (tokens) => { /* handle refresh */ },
+        onRefreshFailure: async (error) => { /* handle failure */ }
+    }
+});
+```
+
+### Migration Guide
+
+**From Direct API Calls:**
+
+```typescript
+// Before: Complex direct API calls
+const response = await client.httpClient.request({
+    method: 'PATCH',
+    endpoint: `/people/${personId}`,
+    data: { /* complex JSON structure */ }
+});
+
+// After: Simple, intuitive methods
+await client.people.setPrimaryCampus(personId, campusId);
+```
+
+**Token Refresh Configuration:**
+
+```typescript
+// Add client credentials to your OAuth configuration
+const client = new PcoClient({
+    auth: {
+        type: 'oauth',
+        accessToken: 'your-token',
+        refreshToken: 'your-refresh-token',
+        clientId: process.env.PCO_APP_ID,        // NEW
+        clientSecret: process.env.PCO_APP_SECRET, // NEW
+        onRefresh: async (tokens) => { /* save tokens */ },
+        onRefreshFailure: async (error) => { /* handle failure */ }
+    }
+});
+```
+
+## [2.4.0] - 2025-01-10
+
+### 🎯 **NEW FEATURES - Age Preference Matching & Exact Name Matching**
+
+This release introduces intelligent age-based person matching and precise name matching capabilities to enhance person discovery and reduce false positives.
+
+### Added
+
+#### **👥 Age Preference Matching**
+
+- **🎂 Age-Based Filtering**: New `agePreference` option to prefer adults or children
+- **📅 Age Range Matching**: Support for `minAge` and `maxAge` parameters for precise age targeting
+- **🗓️ Birth Year Matching**: `birthYear` parameter for matching people born in specific years
+- **🧮 Smart Age Calculation**: Enhanced age calculation with timezone-safe date handling
+- **📊 Age-Based Scoring**: Age matching contributes 15% to overall match score for better accuracy
+
+#### **🎯 Exact Name Matching**
+
+- **✅ Precise Name Matching**: Only matches exact names, eliminating false positives from similar names
+- **🔤 Case-Insensitive**: Maintains case-insensitive matching while ensuring exact character matching
+- **⚡ Performance Optimized**: Simple string comparison for faster matching than fuzzy algorithms
+- **🛡️ Reduced False Positives**: Prevents matching "Jon" when searching for "John"
+
+#### **🔧 Enhanced Matching System**
+
+- **📈 Improved Scoring Algorithm**: Updated scoring weights for better match prioritization
+- **🎯 Candidate Filtering**: Age-based pre-filtering before scoring for more relevant results
+- **📝 Enhanced Match Reasons**: More descriptive match explanations including age-based reasons
+- **🧪 Comprehensive Testing**: 30+ new test cases covering age preferences and exact name matching
+
+### Usage Examples
+
+```typescript
+// Age preference matching
+const adultPerson = await client.people.findOrCreate({
+  firstName: 'Jane',
+  lastName: 'Smith',
+  agePreference: 'adults', // Prefer 18+ years old
+  matchStrategy: 'fuzzy'
+});
+
+// Age range matching
+const youngAdult = await client.people.findOrCreate({
+  firstName: 'Alice',
+  lastName: 'Brown',
+  minAge: 20,
+  maxAge: 30,
+  matchStrategy: 'fuzzy'
+});
+
+// Birth year matching
+const millennial = await client.people.findOrCreate({
+  firstName: 'David',
+  lastName: 'Wilson',
+  birthYear: 1990,
+  matchStrategy: 'fuzzy'
+});
+```
+
+### Technical Details
+
+- **New Helper Functions**: `calculateAgeSafe()`, `isAdult()`, `isChild()`, `matchesAgeCriteria()`
+- **Enhanced PersonMatchOptions**: Added `agePreference`, `minAge`, `maxAge`, `birthYear` properties
+- **Updated Scoring System**: Age matching now contributes 15% to overall match score
+- **Backward Compatibility**: All existing functionality remains unchanged
+
 ## [2.3.1] - 2025-01-10
 
 ### 🐛 **BUG FIXES & STABILITY IMPROVEMENTS**

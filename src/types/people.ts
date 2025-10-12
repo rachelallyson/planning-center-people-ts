@@ -51,8 +51,14 @@ export interface PersonAttributes extends Attributes {
 export interface PersonRelationships {
   emails?: Relationship;
   phone_numbers?: Relationship;
+  addresses?: Relationship;
+  household?: Relationship;
   primary_campus?: Relationship;
   gender?: Relationship;
+  workflow_cards?: Relationship;
+  notes?: Relationship;
+  field_data?: Relationship;
+  social_profiles?: Relationship;
 }
 
 export interface PersonResource

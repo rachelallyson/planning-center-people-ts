@@ -57,6 +57,40 @@ const person = await client.people.findOrCreate(
     status: 'active'
   }
 );
+
+// Age preference matching - prefer adults (18+)
+const adultPerson = await client.people.findOrCreate({
+  firstName: 'Jane',
+  lastName: 'Smith',
+  email: 'jane@example.com',
+  agePreference: 'adults',
+  matchStrategy: 'fuzzy'
+});
+
+// Age preference matching - prefer children (under 18)
+const childPerson = await client.people.findOrCreate({
+  firstName: 'Bobby',
+  lastName: 'Johnson',
+  agePreference: 'children',
+  matchStrategy: 'fuzzy'
+});
+
+// Match by age range
+const youngAdult = await client.people.findOrCreate({
+  firstName: 'Alice',
+  lastName: 'Brown',
+  minAge: 20,
+  maxAge: 30,
+  matchStrategy: 'fuzzy'
+});
+
+// Match by birth year
+const millennial = await client.people.findOrCreate({
+  firstName: 'David',
+  lastName: 'Wilson',
+  birthYear: 1990,
+  matchStrategy: 'fuzzy'
+});
 ```
 
 #### **4. Batch Operations**
