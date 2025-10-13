@@ -9,6 +9,7 @@ import { buildQueryParams, extractFileUrl, isFileUpload } from '../helpers';
 import {
     FieldDataList,
     FieldDataSingle,
+    FieldDataType,
     FieldDatumResource,
     FieldDefinitionResource,
     FieldDefinitionsList,
@@ -339,7 +340,7 @@ export async function createFieldDefinition(
     tabId: string,
     data: {
         name: string;
-        data_type: string;
+        data_type: FieldDataType;
         sequence?: number;
         slug?: string;
         config?: string | Record<string, any>;

@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.2] - 2025-01-10
+
+### 🎯 **TYPE DEFINITION ENHANCEMENT**
+
+This patch release adds enhanced type definitions for better TypeScript support and developer experience.
+
+### Added
+
+- **📝 FieldDataType Type**: Added comprehensive type definition for field data types
+  - **Types**: `'boolean' | 'checkboxes' | 'date' | 'file' | 'number' | 'select' | 'string' | 'text'`
+  - **Usage**: Provides type safety for field definition operations
+  - **Benefits**: Better IntelliSense and compile-time validation
+
+### Enhanced Type Safety
+
+```typescript
+// Now you get full type safety for field data types
+const fieldDefinition: FieldDefinitionAttributes = {
+  data_type: 'select', // ✅ TypeScript knows this is valid
+  // ... other properties
+};
+
+// Invalid types will be caught at compile time
+const invalidField = {
+  data_type: 'invalid', // ❌ TypeScript error
+};
+```
+
+### Migration
+
+No breaking changes - this is a type enhancement release:
+
+```typescript
+// Existing code continues to work
+const fields = await client.people.getFieldDefinitions();
+
+// New type safety benefits
+fields.data.forEach(field => {
+  if (field.attributes.data_type === 'select') {
+    // TypeScript knows this is a select field
+    console.log('Select field:', field.attributes.name);
+  }
+});
+```
+
 ## [2.6.1] - 2025-01-10
 
 ### 🐛 **CRITICAL BUG FIXES**

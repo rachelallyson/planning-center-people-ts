@@ -188,9 +188,11 @@ export type SocialProfileSingle = Response<SocialProfileResource>;
 
 // ===== Field Definition Resource =====
 
+export type FieldDataType = 'boolean' | 'checkboxes' | 'date' | 'file' | 'number'| 'select' | 'string' | 'text';
+
 export interface FieldDefinitionAttributes extends Attributes {
   config: string | Record<string, any> | null;
-  data_type: string;
+  data_type: FieldDataType;
   deleted_at: string | null | false; // Can be date string, null, or boolean false
   name: string;
   sequence: number;
