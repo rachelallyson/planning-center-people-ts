@@ -1434,22 +1434,28 @@ interface CampusResource {
   relationships?: CampusRelationships;
 }
 
-interface CampusAttributes {
-  latitude?: number;
-  longitude?: number;
-  description?: string;
-  street?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  country?: string;
-  phone_number?: string;
-  website?: string;
-  twenty_four_hour_time?: boolean;
-  date_format?: number;
-  church_center_enabled?: boolean;
-  created_at?: string;
-  updated_at?: string;
+export interface CampusAttributes extends Attributes {
+    latitude?: number;
+    longitude?: number;
+    description?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+    phone_number?: string;
+    website?: string;
+    twenty_four_hour_time?: boolean;
+    date_format?: number;
+    church_center_enabled?: boolean;
+    contact_email_address?: string;
+    time_zone?: string;
+    geolocation_set_manually?: boolean,
+    time_zone_raw?: string;
+    name: string,
+    created_at: string,
+    updated_at: string,
+    avatar_url?: string,
 }
 
 interface CampusRelationships {

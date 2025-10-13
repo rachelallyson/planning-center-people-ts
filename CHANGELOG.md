@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.3] - 2025-01-10
+
+### 🏢 **CAMPUS ATTRIBUTES ENHANCEMENT**
+
+This patch release adds comprehensive campus attributes for better campus management and configuration support.
+
+### Added
+
+- **📝 Enhanced CampusAttributes**: Added comprehensive campus configuration attributes
+  - **Time Settings**: `twenty_four_hour_time?: boolean` - 24-hour time format preference
+  - **Date Settings**: `date_format?: number` - Date format configuration
+  - **Features**: `church_center_enabled?: boolean` - Church Center integration status
+  - **Contact Info**: `phone_number?: string`, `website?: string` - Campus contact details
+  - **Location**: `country?: string` - Country information
+  - **Timestamps**: `created_at?: string`, `updated_at?: string` - Audit trail
+
+### Enhanced Campus Management
+
+```typescript
+// Now you get full type safety for campus attributes
+const campus: CampusResource = {
+  type: 'Campus',
+  id: 'campus-123',
+  attributes: {
+    name: 'Main Campus',
+    street: '123 Main St',
+    city: 'Anytown',
+    state: 'CA',
+    zip: '12345',
+    country: 'US',
+    phone_number: '555-1234',
+    website: 'https://example.com',
+    twenty_four_hour_time: true,    // ✅ New attribute
+    date_format: 1,                  // ✅ New attribute  
+    church_center_enabled: true,     // ✅ New attribute
+    created_at: '2025-01-10T00:00:00Z',
+    updated_at: '2025-01-10T00:00:00Z'
+  }
+};
+
+// Campus configuration management
+const campusConfig = await client.people.getCampusById('campus-123');
+if (campusConfig.attributes.church_center_enabled) {
+  console.log('Church Center integration is active');
+}
+```
+
+### Benefits
+
+- **🏢 Complete Campus Data**: Access to all campus configuration options
+- **⚙️ Configuration Management**: Better support for campus settings
+- **🌍 International Support**: Country and date format configuration
+- **📱 Church Center Integration**: Track integration status
+- **🕐 Time Format Support**: 24-hour time format configuration
+
+### Migration
+
+No breaking changes - this is a type enhancement release:
+
+```typescript
+// Existing code continues to work
+const campuses = await client.people.getCampuses();
+
+// New attributes are available but optional
+campuses.data.forEach(campus => {
+  console.log('Campus:', campus.attributes.name);
+  console.log('Church Center:', campus.attributes.church_center_enabled);
+  console.log('Time Format:', campus.attributes.twenty_four_hour_time);
+});
+```
+
 ## [2.6.2] - 2025-01-10
 
 ### 🎯 **TYPE DEFINITION ENHANCEMENT**
