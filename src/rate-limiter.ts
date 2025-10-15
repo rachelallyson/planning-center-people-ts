@@ -2,9 +2,10 @@
  * PCO Rate Limiter
  *
  * Planning Center Online has the following rate limits:
- * - 100 requests per minute (60 seconds)
+ * - 100 requests per 20 seconds (subject to change)
  * - Rate limit headers are returned on every response
  * - 429 responses include Retry-After header
+ * - Limits and time periods can change dynamically
  *
  * This rate limiter tracks requests and enforces these limits.
  */
@@ -26,8 +27,8 @@ export interface RateLimitHeaders {
 export class PcoRateLimiter {
   private requestCount = 0;
   private windowStart = Date.now();
-  private readonly defaultLimit = 100; // requests per minute
-  private readonly defaultWindow = 60000; // 60 seconds in milliseconds
+  private readonly defaultLimit = 100; // requests per 20 seconds
+  private readonly defaultWindow = 20000; // 20 seconds in milliseconds
   private limit: number;
   private windowMs: number;
 
@@ -84,6 +85,14 @@ export class PcoRateLimiter {
       this.limit = parseInt(headers['X-PCO-API-Request-Rate-Limit'], 10);
     }
 
+    if (headers['X-PCO-API-Request-Rate-Period']) {
+      // Update window period from server (in seconds, convert to milliseconds)
+      const periodSeconds = parseInt(headers['X-PCO-API-Request-Rate-Period'], 10);
+      if (!isNaN(periodSeconds)) {
+        this.windowMs = periodSeconds * 1000;
+      }
+    }
+
     if (headers['X-PCO-API-Request-Rate-Count']) {
       this.requestCount = parseInt(headers['X-PCO-API-Request-Rate-Count'], 10);
     }
@@ -127,6 +136,22 @@ export class PcoRateLimiter {
       this.windowStart = now;
       this.requestCount = 0;
     }
+  }
+
+  /**
+   * Parse rate limit error details from 429 response
+   */
+  static parseRateLimitError(errorDetail: string): { current: number; limit: number; period: number } | null {
+    // Parse error like "Rate limit exceeded: 118 of 100 requests per 20 seconds"
+    const match = errorDetail.match(/Rate limit exceeded: (\d+) of (\d+) requests per (\d+) seconds/);
+    if (match) {
+      return {
+        current: parseInt(match[1], 10),
+        limit: parseInt(match[2], 10),
+        period: parseInt(match[3], 10)
+      };
+    }
+    return null;
   }
 
   /**

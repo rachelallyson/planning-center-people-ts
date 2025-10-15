@@ -4,7 +4,7 @@ describe('PcoRateLimiter', () => {
   let rateLimiter: PcoRateLimiter;
 
   beforeEach(() => {
-    rateLimiter = new PcoRateLimiter(100, 60000); // 100 requests per minute
+    rateLimiter = new PcoRateLimiter(100, 20000); // 100 requests per 20 seconds
   });
 
   describe('constructor', () => {
@@ -17,7 +17,7 @@ describe('PcoRateLimiter', () => {
     });
 
     it('should use custom values when provided', () => {
-      const customLimiter = new PcoRateLimiter(50, 30000);
+      const customLimiter = new PcoRateLimiter(50, 10000);
       const info = customLimiter.getRateLimitInfo();
       
       expect(info.limit).toBe(50);
@@ -117,6 +117,18 @@ describe('PcoRateLimiter', () => {
       // Count should remain unchanged if not provided, so remaining = 150 - 0 = 150
       expect(info.remaining).toBe(150);
     });
+
+    it('should update window period from headers', () => {
+      const headers = {
+        'X-PCO-API-Request-Rate-Period': '30', // 30 seconds
+      };
+      
+      const beforeUpdate = rateLimiter.getDebugInfo();
+      rateLimiter.updateFromHeaders(headers);
+      const afterUpdate = rateLimiter.getDebugInfo();
+      
+      expect(afterUpdate.windowMs).toBe(30000); // 30 seconds in milliseconds
+    });
   });
 
   describe('waitForAvailability', () => {
@@ -214,6 +226,37 @@ describe('PcoRateLimiter', () => {
           expect(info.remaining).toBe(10);
           resolve();
         }, 150);
+      });
+    });
+  });
+
+  describe('parseRateLimitError', () => {
+    it('should parse rate limit error details', () => {
+      const errorDetail = 'Rate limit exceeded: 118 of 100 requests per 20 seconds';
+      const parsed = PcoRateLimiter.parseRateLimitError(errorDetail);
+      
+      expect(parsed).toEqual({
+        current: 118,
+        limit: 100,
+        period: 20
+      });
+    });
+
+    it('should return null for invalid error format', () => {
+      const errorDetail = 'Some other error message';
+      const parsed = PcoRateLimiter.parseRateLimitError(errorDetail);
+      
+      expect(parsed).toBeNull();
+    });
+
+    it('should handle different period values', () => {
+      const errorDetail = 'Rate limit exceeded: 50 of 75 requests per 30 seconds';
+      const parsed = PcoRateLimiter.parseRateLimitError(errorDetail);
+      
+      expect(parsed).toEqual({
+        current: 50,
+        limit: 75,
+        period: 30
       });
     });
   });

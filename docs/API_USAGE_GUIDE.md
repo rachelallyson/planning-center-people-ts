@@ -473,8 +473,8 @@ client.on('rate:limit', (event) => {
 const client = new PcoClient({
   auth: { type: 'personal_access_token', personalAccessToken: 'token' },
   rateLimit: {
-    maxRequests: 80, // Leave headroom
-    perMilliseconds: 60000
+    maxRequests: 80, // Leave headroom (PCO allows 100 per 20 seconds)
+    perMilliseconds: 20000 // 20 seconds
   }
 });
 ```

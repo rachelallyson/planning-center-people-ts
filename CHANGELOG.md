@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2025-01-11
+
+### 🚀 **RATE LIMITING IMPROVEMENTS**
+
+This release updates the rate limiting implementation to match Planning Center's actual API specifications and adds enhanced error handling capabilities.
+
+### Added
+
+- **📊 Enhanced Rate Limiting**: Updated default rate limits to match PCO's actual API (100 requests per 20 seconds)
+- **🔄 Dynamic Period Adjustment**: Automatically adapts to server-provided time periods via `X-PCO-API-Request-Rate-Period` header
+- **🔍 Error Parsing**: New `parseRateLimitError()` method extracts detailed information from 429 error responses
+- **📝 Error Message Parsing**: Handles error messages like `"Rate limit exceeded: 118 of 100 requests per 20 seconds"`
+- **🧪 Comprehensive Testing**: Added 22 rate limiter tests with new 20-second window and error parsing tests
+
+### Changed
+
+- **⚡ Rate Limit Defaults**: Changed from 100 requests per 60 seconds to 100 requests per 20 seconds
+- **📚 Documentation**: Updated all documentation to reflect correct rate limiting specifications
+- **🔧 Header Synchronization**: Enhanced parsing of `X-PCO-API-Request-Rate-Period` header for dynamic window adjustment
+- **📖 Configuration Examples**: Updated client configuration examples with proper rate limiting settings
+
+### Fixed
+
+- **🎯 API Compliance**: Now correctly follows Planning Center's actual API rate limits
+- **🔄 Server Synchronization**: Better rate limit tracking that stays in sync with PCO's servers
+- **📊 Debug Information**: Enhanced visibility into rate limit status and remaining requests
+
+### Technical Details
+
+- **Backward Compatible**: No breaking changes - existing code continues to work
+- **Future-Proof**: Automatically adapts to PCO rate limit changes via header synchronization
+- **Performance**: More accurate rate limiting reduces 429 errors and improves API efficiency
+
 ## [2.6.3] - 2025-01-10
 
 ### 🏢 **CAMPUS ATTRIBUTES ENHANCEMENT**

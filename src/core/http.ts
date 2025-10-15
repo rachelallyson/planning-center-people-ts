@@ -42,7 +42,7 @@ export class PcoHttpClient {
         this.rateLimitTracker = new RateLimitTracker();
 
         // Initialize rate limiter
-        this.rateLimiter = new PcoRateLimiter(100, 60000); // 100 requests per minute
+        this.rateLimiter = new PcoRateLimiter(100, 20000); // 100 requests per 20 seconds
     }
 
     async request<T = any>(options: HttpRequestOptions): Promise<HttpResponse<T>> {

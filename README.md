@@ -9,7 +9,7 @@ A modern, type-safe TypeScript library for interacting with the Planning Center 
 - ✅ **Strict TypeScript**: Full type safety with no `any` types
 - ✅ **JSON:API 1.0 Compliant**: Follows the JSON:API specification exactly
 - ✅ **Functional Approach**: Clean, composable functions instead of classes
-- ✅ **Rate Limiting**: Built-in rate limiting with PCO's 100 req/min policy
+- ✅ **Rate Limiting**: Built-in rate limiting with PCO's 100 req/20s policy
 - ✅ **Modern HTTP**: Uses native fetch API (no external dependencies)
 - ✅ **Authentication**: Supports both Personal Access Tokens and OAuth 2.0
 - ✅ **Enhanced Error Handling**: Comprehensive error handling with categories, severity, and retry logic
@@ -505,7 +505,7 @@ See [TYPE_VALIDATION_SUMMARY.md](./TYPE_VALIDATION_SUMMARY.md) for detailed docu
 
 - All test data is automatically cleaned up
 - Uses descriptive test names (e.g., "TEST_INTEGRATION_2025")
-- Respects PCO rate limits (90 requests per 20 seconds)
+- Respects PCO rate limits (100 requests per 20 seconds)
 - 30-second timeout per test
 - Comprehensive error handling
 

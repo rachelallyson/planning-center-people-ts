@@ -68,7 +68,7 @@ export function createPcoClient(config: PcoClientConfig): PcoClientState {
   // Initialize rate limiter
   const rateLimitConfig = config.rateLimit ?? {
     maxRequests: 100,
-    perMilliseconds: 60000,
+    perMilliseconds: 20000, // 20 seconds
   };
   const rateLimiter = new PcoRateLimiter(
     rateLimitConfig.maxRequests,

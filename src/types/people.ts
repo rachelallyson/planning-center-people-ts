@@ -627,6 +627,7 @@ export type OrganizationStatisticSingle =
 // ===== Campus Resource =====
 
 export interface CampusAttributes extends Attributes {
+  name: string;
   latitude?: number;
   longitude?: number;
   description?: string;
