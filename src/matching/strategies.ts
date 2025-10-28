@@ -31,8 +31,8 @@ export class MatchStrategies {
      * Exact matching strategy - only return matches with very high confidence
      */
     private selectExactMatch(candidates: MatchResult[]): MatchResult | null {
-        // Only return matches with score >= 0.9
-        const exactMatches = candidates.filter(c => c.score >= 0.9);
+        // Only return matches with score >= 0.8 (lowered from 0.9)
+        const exactMatches = candidates.filter(c => c.score >= 0.8);
         return exactMatches.length > 0 ? exactMatches[0] : null;
     }
 
@@ -40,8 +40,8 @@ export class MatchStrategies {
      * Fuzzy matching strategy - return best match above threshold
      */
     private selectFuzzyMatch(candidates: MatchResult[]): MatchResult | null {
-        // Return best match with score >= 0.7
-        const fuzzyMatches = candidates.filter(c => c.score >= 0.7);
+        // Return best match with score >= 0.5 (lowered from 0.7)
+        const fuzzyMatches = candidates.filter(c => c.score >= 0.5);
         return fuzzyMatches.length > 0 ? fuzzyMatches[0] : null;
     }
 

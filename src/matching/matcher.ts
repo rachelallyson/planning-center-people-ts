@@ -87,7 +87,7 @@ export class PersonMatcher {
                 const emailMatches = await this.peopleModule.search({ email });
                 candidates.push(...emailMatches.data);
             } catch (error) {
-                // Email search failed, continue with other strategies
+                console.warn('Email search failed:', error);
             }
         }
 
@@ -97,7 +97,7 @@ export class PersonMatcher {
                 const phoneMatches = await this.peopleModule.search({ phone });
                 candidates.push(...phoneMatches.data);
             } catch (error) {
-                // Phone search failed, continue with other strategies
+                console.warn('Phone search failed:', error);
             }
         }
 
@@ -109,7 +109,7 @@ export class PersonMatcher {
                 });
                 candidates.push(...nameMatches.data);
             } catch (error) {
-                // Name search failed, continue with other strategies
+                console.warn('Name search failed:', error);
             }
         }
 
@@ -121,7 +121,7 @@ export class PersonMatcher {
                 });
                 candidates.push(...broadMatches.data);
             } catch (error) {
-                // Broad search failed
+                console.warn('Broad search failed:', error);
             }
         }
 
@@ -177,10 +177,11 @@ export class PersonMatcher {
             try {
                 await this.peopleModule.addEmail(person.id, {
                     address: options.email,
+                    location: 'Home', // Required field
                     primary: true
                 });
             } catch (error) {
-                console.warn('Failed to create email contact:', error);
+                console.warn(`Failed to create email contact for person ${person.id}:`, error);
             }
         }
 
@@ -189,10 +190,11 @@ export class PersonMatcher {
             try {
                 await this.peopleModule.addPhoneNumber(person.id, {
                     number: options.phone,
+                    location: 'Home', // Required field
                     primary: true
                 });
             } catch (error) {
-                console.warn('Failed to create phone contact:', error);
+                console.warn(`Failed to create phone contact for person ${person.id}:`, error);
             }
         }
 
@@ -201,7 +203,7 @@ export class PersonMatcher {
             try {
                 await this.peopleModule.setPrimaryCampus(person.id, options.campusId);
             } catch (error) {
-                console.warn('Failed to set campus:', error);
+                console.warn(`Failed to set campus for person ${person.id}:`, error);
             }
         }
 

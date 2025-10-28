@@ -340,12 +340,11 @@ export async function searchPeople(
         where.status = criteria.status;
     }
 
-    if (criteria.name) {
-        where.name = criteria.name;
-    }
-
+    // Use flexible search when we have email, otherwise use specific name search
     if (criteria.email) {
-        where.email = criteria.email;
+        where.search_name_or_email_or_phone_number = criteria.email;
+    } else if (criteria.name) {
+        where.search_name = criteria.name;
     }
 
     return getPeople(client, {

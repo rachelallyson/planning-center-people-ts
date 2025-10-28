@@ -67,7 +67,16 @@ export class PaginationHelper {
                 totalCount = Number(response.data.meta.total_count) || 0;
             }
 
-            hasMore = !!response.data.links?.next;
+            // Check if we have a next link and if it's different from current page
+            const nextLink = response.data.links?.next;
+            hasMore = !!nextLink;
+            
+            // Additional safeguard: if we're getting the same page repeatedly, break the loop
+            if (hasMore && nextLink && nextLink.includes(`page=${page}`)) {
+                console.warn(`Pagination loop detected: next link points to same page ${page}. Breaking loop.`);
+                hasMore = false;
+            }
+            
             page++;
 
             if (onProgress) {
@@ -136,7 +145,16 @@ export class PaginationHelper {
                 yield response.data.data;
             }
 
-            hasMore = !!response.data.links?.next;
+            // Check if we have a next link and if it's different from current page
+            const nextLink = response.data.links?.next;
+            hasMore = !!nextLink;
+            
+            // Additional safeguard: if we're getting the same page repeatedly, break the loop
+            if (hasMore && nextLink && nextLink.includes(`page=${page}`)) {
+                console.warn(`Pagination loop detected: next link points to same page ${page}. Breaking loop.`);
+                hasMore = false;
+            }
+            
             page++;
 
             if (hasMore && delay > 0) {

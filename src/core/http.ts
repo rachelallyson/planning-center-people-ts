@@ -103,7 +103,7 @@ export class PcoHttpClient {
         }
     }
 
-    private async makeRequest<T>(options: HttpRequestOptions, requestId: string): Promise<HttpResponse<T>> {
+    private async makeRequest<T>(options: HttpRequestOptions, requestId: string, retryCount: number = 0): Promise<HttpResponse<T>> {
         const baseURL = this.config.baseURL || 'https://api.planningcenteronline.com/people/v2';
         let url = options.endpoint.startsWith('http') ? options.endpoint : `${baseURL}${options.endpoint}`;
 
@@ -184,21 +184,28 @@ export class PcoHttpClient {
 
             // Handle 429 responses
             if (response.status === 429) {
+                if (retryCount >= 5) {
+                    throw new Error(`Rate limit exceeded after ${retryCount} retries`);
+                }
                 await this.rateLimiter.waitForAvailability();
-                return this.makeRequest<T>(options, requestId);
+                return this.makeRequest<T>(options, requestId, retryCount + 1);
             }
 
             // Handle other errors
             if (!response.ok) {
                 // Handle 401 errors with token refresh if available
                 if (response.status === 401 && this.config.auth.type === 'oauth') {
+                    if (retryCount >= 3) {
+                        throw new Error(`Authentication failed after ${retryCount} retries`);
+                    }
                     try {
                         await this.attemptTokenRefresh();
-                        return this.makeRequest<T>(options, requestId);
+                        return this.makeRequest<T>(options, requestId, retryCount + 1);
                     } catch (refreshError) {
                         console.warn('Token refresh failed:', refreshError);
                         // Call the onRefreshFailure callback
                         await this.config.auth.onRefreshFailure(refreshError as Error);
+                        throw refreshError;
                     }
                 }
 

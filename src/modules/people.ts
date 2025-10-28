@@ -444,16 +444,17 @@ export class PeopleModule extends BaseModule {
     }): Promise<{ data: PersonResource[]; meta?: any; links?: any }> {
         const where: Record<string, any> = {};
 
-        if (criteria.name) {
-            where.name = criteria.name;
-        }
-
-        if (criteria.email) {
-            where.email = criteria.email;
-        }
-
-        if (criteria.phone) {
-            where.phone = criteria.phone;
+        // Use flexible search when we have multiple criteria or want broader matching
+        if (criteria.email || criteria.phone) {
+            // Use the powerful flexible search parameter
+            if (criteria.email) {
+                where.search_name_or_email_or_phone_number = criteria.email;
+            } else if (criteria.phone) {
+                where.search_name_or_email_or_phone_number = criteria.phone;
+            }
+        } else if (criteria.name) {
+            // Use specific name search when only name is provided
+            where.search_name = criteria.name;
         }
 
         if (criteria.status) {
