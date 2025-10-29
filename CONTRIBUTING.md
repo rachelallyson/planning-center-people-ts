@@ -265,6 +265,17 @@ When adding features:
 - Use strict typing (no `any`)
 - Document complex types with JSDoc
 
+## API Documentation
+
+API documentation is automatically generated using TypeDoc and deployed to GitHub Pages via GitHub Actions:
+
+- **Local generation**: Run `npm run docs` to generate docs locally
+- **Watch mode**: Run `npm run docs:watch` for development
+- **CI/CD**: Docs are automatically built and deployed on pushes to `main`
+- **View online**: See [GitHub Pages](https://rachelallyson.github.io/planning-center-people-ts/api/)
+
+Generated HTML files are ignored in git (see `.gitignore`) - they're built in CI/CD.
+
 ## Error Handling
 
 - Use `PcoError` for enhanced errors
