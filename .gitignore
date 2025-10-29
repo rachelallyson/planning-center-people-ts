@@ -124,3 +124,5 @@ temp/
 
 # Local development
 .local
+
+docs/api/

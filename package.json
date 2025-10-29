@@ -18,6 +18,8 @@
         "test:integration:v2:all": "dotenv -e .env.test -- jest --testPathPatterns=integration/v2/.*.integration.test.ts --setupFilesAfterEnv='<rootDir>/tests/integration-setup.ts' --testTimeout=30000",
         "test:edge-cases": "jest --testPathPatterns=edge-cases.test.ts --testTimeout=30000",
         "test:all": "npm run test && npm run test:edge-cases",
+        "docs": "typedoc",
+        "docs:watch": "typedoc --watch",
         "prepublishOnly": "npm run build"
     },
     "keywords": [

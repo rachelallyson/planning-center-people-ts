@@ -1,0 +1,34 @@
+{
+    "entryPoints": [
+        "src/index.ts"
+    ],
+    "out": "docs/api",
+    "entryPointStrategy": "resolve",
+    "readme": "none",
+    "name": "Planning Center People TypeScript Library",
+    "includeVersion": true,
+    "excludePrivate": true,
+    "excludeProtected": true,
+    "excludeInternal": true,
+    "excludeExternals": false,
+    "theme": "default",
+    "excludeNotDocumented": false,
+    "plugin": [],
+    "sourceLinkTemplate": "https://github.com/rachelallyson/planning-center-people-ts/blob/main/{path}#L{line}",
+    "gitRevision": "main",
+    "tsconfig": "tsconfig.json",
+    "skipErrorChecking": false,
+    "validation": {
+        "invalidLink": true,
+        "notExported": true
+    },
+    "categorizeByGroup": true,
+    "categoryOrder": [
+        "Classes",
+        "Interfaces",
+        "Types",
+        "Enums",
+        "Functions",
+        "*"
+    ]
+}

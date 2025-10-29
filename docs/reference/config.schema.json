@@ -1,0 +1,204 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PcoClientConfig",
+    "description": "Configuration schema for Planning Center People TypeScript client",
+    "type": "object",
+    "required": [
+        "auth"
+    ],
+    "properties": {
+        "auth": {
+            "description": "Authentication configuration",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "title": "Personal Access Token",
+                    "required": [
+                        "type",
+                        "personalAccessToken"
+                    ],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": [
+                                "personal_access_token"
+                            ]
+                        },
+                        "personalAccessToken": {
+                            "type": "string",
+                            "description": "PCO personal access token"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "title": "OAuth 2.0",
+                    "required": [
+                        "type",
+                        "accessToken",
+                        "refreshToken",
+                        "onRefresh",
+                        "onRefreshFailure"
+                    ],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": [
+                                "oauth"
+                            ]
+                        },
+                        "accessToken": {
+                            "type": "string",
+                            "description": "Current access token"
+                        },
+                        "refreshToken": {
+                            "type": "string",
+                            "description": "Refresh token"
+                        },
+                        "clientId": {
+                            "type": "string",
+                            "description": "Client ID (optional, can use PCO_APP_ID env var)"
+                        },
+                        "clientSecret": {
+                            "type": "string",
+                            "description": "Client secret (optional, can use PCO_APP_SECRET env var)"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "title": "Basic Auth",
+                    "required": [
+                        "type",
+                        "appId",
+                        "appSecret"
+                    ],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": [
+                                "basic"
+                            ]
+                        },
+                        "appId": {
+                            "type": "string",
+                            "description": "PCO app ID"
+                        },
+                        "appSecret": {
+                            "type": "string",
+                            "description": "PCO app secret"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            ]
+        },
+        "caching": {
+            "type": "object",
+            "description": "Caching configuration",
+            "properties": {
+                "fieldDefinitions": {
+                    "type": "boolean",
+                    "description": "Cache field definitions",
+                    "default": false
+                },
+                "ttl": {
+                    "type": "number",
+                    "description": "Time to live in milliseconds",
+                    "default": 300000,
+                    "minimum": 0
+                },
+                "maxSize": {
+                    "type": "number",
+                    "description": "Maximum cache size",
+                    "default": 1000,
+                    "minimum": 1
+                }
+            },
+            "additionalProperties": false
+        },
+        "retry": {
+            "type": "object",
+            "description": "Retry configuration",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable retries",
+                    "default": true
+                },
+                "maxRetries": {
+                    "type": "number",
+                    "description": "Maximum retry attempts",
+                    "default": 3,
+                    "minimum": 0
+                },
+                "baseDelay": {
+                    "type": "number",
+                    "description": "Base delay in milliseconds",
+                    "default": 1000,
+                    "minimum": 0
+                },
+                "maxDelay": {
+                    "type": "number",
+                    "description": "Maximum delay in milliseconds",
+                    "default": 30000,
+                    "minimum": 0
+                },
+                "backoff": {
+                    "type": "string",
+                    "enum": [
+                        "linear",
+                        "exponential"
+                    ],
+                    "description": "Backoff strategy",
+                    "default": "exponential"
+                }
+            },
+            "additionalProperties": false
+        },
+        "events": {
+            "type": "object",
+            "description": "Event handlers",
+            "properties": {
+                "onError": {
+                    "description": "Error event handler"
+                },
+                "onAuthFailure": {
+                    "description": "Authentication failure event handler"
+                },
+                "onRequestStart": {
+                    "description": "Request start event handler"
+                },
+                "onRequestComplete": {
+                    "description": "Request complete event handler"
+                },
+                "onRateLimit": {
+                    "description": "Rate limit event handler"
+                }
+            },
+            "additionalProperties": false
+        },
+        "baseURL": {
+            "type": "string",
+            "description": "Base URL override",
+            "default": "https://api.planningcenteronline.com/people/v2",
+            "format": "uri"
+        },
+        "timeout": {
+            "type": "number",
+            "description": "Request timeout in milliseconds",
+            "default": 30000,
+            "minimum": 0
+        },
+        "headers": {
+            "type": "object",
+            "description": "Custom headers",
+            "additionalProperties": {
+                "type": "string"
+            }
+        }
+    },
+    "additionalProperties": false
+}
