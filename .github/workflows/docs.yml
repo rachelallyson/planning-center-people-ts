@@ -38,7 +38,7 @@ jobs:
         run: npm run docs
 
       - name: Build Docusaurus Site
-        run: docusaurus build
+        run: npx docusaurus build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
