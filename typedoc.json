@@ -11,9 +11,10 @@
     "excludeProtected": true,
     "excludeInternal": true,
     "excludeExternals": false,
-    "theme": "default",
     "excludeNotDocumented": false,
-    "plugin": [],
+    "plugin": [
+        "typedoc-plugin-markdown"
+    ],
     "sourceLinkTemplate": "https://github.com/rachelallyson/planning-center-people-ts/blob/main/{path}#L{line}",
     "gitRevision": "main",
     "tsconfig": "tsconfig.json",
@@ -30,5 +31,8 @@
         "Enums",
         "Functions",
         "*"
-    ]
+    ],
+    "publicPath": "/planning-center-people-ts/",
+    "hideBreadcrumbs": false,
+    "hidePageHeader": false
 }

@@ -126,8 +126,5 @@ temp/
 .local
 
 # Generated API documentation (built in CI/CD)
-docs/api/**/*.html
-docs/api/assets/
-docs/api/hierarchy.html
-docs/api/index.html
+docs/api/**/*.md
 !docs/api/README.md

@@ -52,6 +52,7 @@
         "jest": "^30.2.0",
         "ts-jest": "^29.4.4",
         "typedoc": "^0.28.14",
+        "typedoc-plugin-markdown": "^4.9.0",
         "typescript": "^5.9.3"
     },
     "files": [
